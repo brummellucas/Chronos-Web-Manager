@@ -1,0 +1,230 @@
+{% extends "base.html" %}
+
+{% block title %}Visualizar Cadastro{% endblock %}
+{% block page_title %}Detalhes do Cadastro{% endblock %}
+
+{% block page_actions %}
+<div class="btn-group">
+    <a href="{{ url_for('listar_cadastros') }}" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left"></i> Voltar
+    </a>
+    <a href="{{ url_for('editar_cadastro', id=cadastro.id) }}" class="btn btn-primary">
+        <i class="bi bi-pencil"></i> Editar
+    </a>
+    <a href="{{ url_for('criar_horario') }}?cadastro={{ cadastro.id }}" class="btn btn-success">
+        <i class="bi bi-plus-circle"></i> Novo Agendamento
+    </a>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-4">
+        <!-- Card de Informações -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="bi bi-person-circle me-2"></i>Informações do Cadastro
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="text-center mb-4">
+                    <div class="avatar-xl bg-primary rounded-circle d-inline-flex align-items-center justify-content-center">
+                        <span class="text-white fs-2">{{ cadastro.nome[:1]|upper }}</span>
+                    </div>
+                    <h4 class="mt-3">{{ cadastro.nome }}</h4>
+                    <p class="text-muted">{{ cadastro.email }}</p>
+                </div>
+                
+                <div class="list-group list-group-flush">
+                    <div class="list-group-item d-flex justify-content-between">
+                        <span>ID:</span>
+                        <strong>#{{ cadastro.id }}</strong>
+                    </div>
+                    {% if cadastro.telefone %}
+                    <div class="list-group-item d-flex justify-content-between">
+                        <span>Telefone:</span>
+                        <strong>{{ cadastro.telefone }}</strong>
+                    </div>
+                    {% endif %}
+                    {% if cadastro.documento %}
+                    <div class="list-group-item d-flex justify-content-between">
+                        <span>Documento:</span>
+                        <strong>{{ cadastro.documento }}</strong>
+                    </div>
+                    {% endif %}
+                    <div class="list-group-item d-flex justify-content-between">
+                        <span>Data de Cadastro:</span>
+                        <strong>{{ cadastro.data_criacao.strftime('%d/%m/%Y %H:%M') }}</strong>
+                    </div>
+                    <div class="list-group-item d-flex justify-content-between">
+                        <span>Total de Agendamentos:</span>
+                        <span class="badge bg-primary">{{ cadastro.horarios|length }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Estatísticas -->
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="bi bi-graph-up me-2"></i>Estatísticas
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row text-center">
+                    <div class="col-6">
+                        <div class="stat-card p-3">
+                            <div class="stat-number">{{ horarios_confirmados }}</div>
+                            <div class="stat-label">Confirmados</div>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="stat-card p-3">
+                            <div class="stat-number">{{ horarios_pendentes }}</div>
+                            <div class="stat-label">Pendentes</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-8">
+        <!-- Agendamentos do Cadastro -->
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">
+                    <i class="bi bi-calendar-week me-2"></i>Agendamentos
+                </h5>
+                <span class="badge bg-primary">{{ cadastro.horarios|length }} agendamentos</span>
+            </div>
+            <div class="card-body">
+                {% if cadastro.horarios %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Data</th>
+                                <th>Horário</th>
+                                <th>Serviço</th>
+                                <th>Status</th>
+                                <th class="text-end">Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for horario in cadastro.horarios|sort(attribute='data', reverse=True) %}
+                            <tr>
+                                <td>
+                                    <strong>{{ horario.data.strftime('%d/%m/%Y') }}</strong>
+                                </td>
+                                <td>
+                                    {{ horario.hora_inicio.strftime('%H:%M') }} - {{ horario.hora_fim.strftime('%H:%M') }}
+                                </td>
+                                <td>
+                                    {% if horario.descricao %}
+                                    {{ horario.descricao[:50] }}
+                                    {% if horario.descricao|length > 50 %}...{% endif %}
+                                    {% else %}
+                                    <span class="text-muted">Sem descrição</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if horario.data > hoje %}
+                                    <span class="badge bg-success">Agendado</span>
+                                    {% else %}
+                                    <span class="badge bg-secondary">Realizado</span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-end">
+                                    <div class="btn-group btn-group-sm">
+                                        <a href="{{ url_for('visualizar_horario', id=horario.id) }}" 
+                                           class="btn btn-outline-primary" title="Visualizar">
+                                            <i class="bi bi-eye"></i>
+                                        </a>
+                                        <a href="{{ url_for('editar_horario', id=horario.id) }}" 
+                                           class="btn btn-outline-success" title="Editar">
+                                            <i class="bi bi-pencil"></i>
+                                        </a>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center py-5">
+                    <div class="text-muted">
+                        <i class="bi bi-calendar-x fs-1"></i>
+                        <h5 class="mt-3">Nenhum agendamento</h5>
+                        <p>Este cadastro ainda não possui agendamentos</p>
+                        <a href="{{ url_for('criar_horario') }}?cadastro={{ cadastro.id }}" 
+                           class="btn btn-primary mt-2">
+                            <i class="bi bi-plus-circle"></i> Criar Primeiro Agendamento
+                        </a>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Histórico de Atividades -->
+        <div class="card mt-4">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="bi bi-clock-history me-2"></i>Histórico de Atividades
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="timeline">
+                    {% for atividade in atividades %}
+                    <div class="timeline-item">
+                        <div class="timeline-marker"></div>
+                        <div class="timeline-content">
+                            <h6>{{ atividade.titulo }}</h6>
+                            <p class="text-muted mb-1">{{ atividade.descricao }}</p>
+                            <small class="text-muted">{{ atividade.data.strftime('%d/%m/%Y %H:%M') }}</small>
+                        </div>
+                    </div>
+                    {% else %}
+                    <div class="text-center text-muted py-4">
+                        <i class="bi bi-info-circle fs-1"></i>
+                        <p class="mt-2">Nenhuma atividade registrada</p>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.timeline {
+    position: relative;
+    padding-left: 30px;
+}
+.timeline-item {
+    position: relative;
+    margin-bottom: 20px;
+}
+.timeline-marker {
+    position: absolute;
+    left: -30px;
+    top: 0;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: var(--primary-color);
+    border: 3px solid white;
+    box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.2);
+}
+.timeline-content {
+    background: var(--light-color);
+    padding: 15px;
+    border-radius: var(--border-radius-sm);
+    border-left: 3px solid var(--primary-color);
+}
+</style>
+{% endblock %}  

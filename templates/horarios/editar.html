@@ -1,0 +1,422 @@
+{% extends "base.html" %}
+
+{% block title %}Editar Horário{% endblock %}
+{% block page_title %}Editar Agendamento{% endblock %}
+
+{% block page_actions %}
+<div class="btn-group">
+    <a href="{{ url_for('listar_horarios') }}" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left"></i> Voltar
+    </a>
+    <a href="{{ url_for('visualizar_horario', id=horario.id) }}" class="btn btn-primary">
+        <i class="bi bi-eye"></i> Visualizar
+    </a>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="bi bi-calendar-check me-2"></i>Editar Agendamento #{{ horario.id }}
+                </h5>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('editar_horario', id=horario.id) }}">
+                    <!-- Informações Atuais -->
+                    <div class="alert alert-info mb-4">
+                        <div class="d-flex">
+                            <div class="me-3">
+                                <i class="bi bi-info-circle fs-4"></i>
+                            </div>
+                            <div>
+                                <h6>Informações Atuais do Agendamento</h6>
+                                <p class="mb-0">
+                                    <strong>Data:</strong> {{ horario.data.strftime('%d/%m/%Y') }} |
+                                    <strong>Horário:</strong> {{ horario.hora_inicio.strftime('%H:%M') }} - {{ horario.hora_fim.strftime('%H:%M') }} |
+                                    <strong>Cliente:</strong> {{ horario.cadastro.nome }}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Dados do Agendamento -->
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="cadastro_id" class="form-label">Cliente *</label>
+                            <select class="form-select" id="cadastro_id" name="cadastro_id" required>
+                                {% for cadastro in cadastros %}
+                                <option value="{{ cadastro.id }}" 
+                                        {% if cadastro.id == horario.cadastro_id %}selected{% endif %}>
+                                    {{ cadastro.nome }} - {{ cadastro.email }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            <label for="status" class="form-label">Status</label>
+                            <select class="form-select" id="status" name="status">
+                                <option value="agendado" {% if horario.status == 'agendado' %}selected{% endif %}>Agendado</option>
+                                <option value="confirmado" {% if horario.status == 'confirmado' %}selected{% endif %}>Confirmado</option>
+                                <option value="realizado" {% if horario.status == 'realizado' %}selected{% endif %}>Realizado</option>
+                                <option value="cancelado" {% if horario.status == 'cancelado' %}selected{% endif %}>Cancelado</option>
+                                <option value="pendente" {% if horario.status == 'pendente' %}selected{% endif %}>Pendente</option>
+                            </select>
+                        </div>
+                        
+                        <div class="col-md-4 mb-3">
+                            <label for="data" class="form-label">Nova Data</label>
+                            <input type="date" class="form-control" id="data" name="data" 
+                                   value="{{ horario.data.strftime('%Y-%m-%d') }}" 
+                                   min="{{ hoje }}">
+                            <div class="form-text">Deixe em branco para manter atual</div>
+                        </div>
+                        
+                        <div class="col-md-4 mb-3">
+                            <label for="hora_inicio" class="form-label">Nova Hora Início</label>
+                            <input type="time" class="form-control" id="hora_inicio" name="hora_inicio" 
+                                   value="{{ horario.hora_inicio.strftime('%H:%M') }}">
+                        </div>
+                        
+                        <div class="col-md-4 mb-3">
+                            <label for="hora_fim" class="form-label">Nova Hora Fim</label>
+                            <input type="time" class="form-control" id="hora_fim" name="hora_fim" 
+                                   value="{{ horario.hora_fim.strftime('%H:%M') }}">
+                        </div>
+                        
+                        <div class="col-md-12 mb-3">
+                            <label for="descricao" class="form-label">Descrição / Serviço</label>
+                            <textarea class="form-control" id="descricao" name="descricao" rows="4">{{ horario.descricao or '' }}</textarea>
+                            <div class="form-text">
+                                <span id="charCounter">{{ (horario.descricao or '')|length }}/500 caracteres</span>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Tipo de Serviço</label>
+                            <select class="form-select" name="tipo_servico">
+                                <option value="">Selecione...</option>
+                                <option value="consulta" {% if horario.tipo_servico == 'consulta' %}selected{% endif %}>Consulta</option>
+                                <option value="retorno" {% if horario.tipo_servico == 'retorno' %}selected{% endif %}>Retorno</option>
+                                <option value="exame" {% if horario.tipo_servico == 'exame' %}selected{% endif %}>Exame</option>
+                                <option value="procedimento" {% if horario.tipo_servico == 'procedimento' %}selected{% endif %}>Procedimento</option>
+                                <option value="outro" {% if horario.tipo_servico == 'outro' %}selected{% endif %}>Outro</option>
+                            </select>
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Prioridade</label>
+                            <select class="form-select" name="prioridade">
+                                <option value="normal" {% if horario.prioridade == 'normal' %}selected{% endif %}>Normal</option>
+                                <option value="alta" {% if horario.prioridade == 'alta' %}selected{% endif %}>Alta</option>
+                                <option value="urgente" {% if horario.prioridade == 'urgente' %}selected{% endif %}>Urgente</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <!-- Observações -->
+                    <div class="mb-4">
+                        <label class="form-label">Observações da Alteração</label>
+                        <textarea class="form-control" name="observacoes" rows="2" 
+                                  placeholder="Descreva o motivo da alteração (opcional)"></textarea>
+                    </div>
+                    
+                    <!-- Resumo das Alterações -->
+                    <div class="card bg-light mb-4">
+                        <div class="card-header">
+                            <h6 class="mb-0">
+                                <i class="bi bi-arrow-clockwise me-2"></i>Resumo das Alterações
+                            </h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <p class="mb-2">
+                                        <strong>Data:</strong> 
+                                        <span class="text-muted">{{ horario.data.strftime('%d/%m/%Y') }}</span> 
+                                        → <span id="novaData">--/--/----</span>
+                                    </p>
+                                    <p class="mb-2">
+                                        <strong>Horário:</strong> 
+                                        <span class="text-muted">{{ horario.hora_inicio.strftime('%H:%M') }}-{{ horario.hora_fim.strftime('%H:%M') }}</span>
+                                        → <span id="novoHorario">--:-- às --:--</span>
+                                    </p>
+                                </div>
+                                <div class="col-md-6">
+                                    <p class="mb-2">
+                                        <strong>Status:</strong> 
+                                        <span class="badge bg-info">{{ horario.status|title }}</span> 
+                                        → <span id="novoStatus" class="badge bg-primary">Agendado</span>
+                                    </p>
+                                    <p class="mb-2">
+                                        <strong>Cliente:</strong> 
+                                        <span class="text-muted">{{ horario.cadastro.nome }}</span>
+                                        → <span id="novoCliente">{{ horario.cadastro.nome }}</span>
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Botões de Ação -->
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-check-lg"></i> Salvar Alterações
+                            </button>
+                            <button type="button" class="btn btn-outline-secondary" 
+                                    onclick="window.history.back()">
+                                <i class="bi bi-x-lg"></i> Cancelar
+                            </button>
+                        </div>
+                        <div>
+                            <button type="button" class="btn btn-outline-danger" 
+                                    onclick="confirmarExclusao('{{ url_for('deletar_horario', id=horario.id) }}', 
+                                    'Tem certeza que deseja excluir este agendamento?')">
+                                <i class="bi bi-trash"></i> Excluir Agendamento
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <!-- Histórico do Agendamento -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h6 class="mb-0">
+                    <i class="bi bi-clock-history me-2"></i>Histórico do Agendamento
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="timeline">
+                    <div class="timeline-item">
+                        <div class="timeline-marker bg-success"></div>
+                        <div class="timeline-content">
+                            <h6>Criação do Agendamento</h6>
+                            <p class="text-muted mb-1">Agendamento criado por sistema</p>
+                            <small class="text-muted">{{ horario.data_criacao.strftime('%d/%m/%Y %H:%M') }}</small>
+                        </div>
+                    </div>
+                    
+                    {% if historico %}
+                    {% for item in historico %}
+                    <div class="timeline-item">
+                        <div class="timeline-marker bg-info"></div>
+                        <div class="timeline-content">
+                            <h6>{{ item.titulo }}</h6>
+                            <p class="text-muted mb-1">{{ item.descricao }}</p>
+                            <small class="text-muted">{{ item.data.strftime('%d/%m/%Y %H:%M') }}</small>
+                        </div>
+                    </div>
+                    {% endfor %}
+                    {% endif %}
+                    
+                    <div class="timeline-item">
+                        <div class="timeline-marker bg-primary"></div>
+                        <div class="timeline-content">
+                            <h6>Última Visualização</h6>
+                            <p class="text-muted mb-1">Visualizado agora</p>
+                            <small class="text-muted">{{ agora.strftime('%d/%m/%Y %H:%M') }}</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Informações do Cliente -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h6 class="mb-0">
+                    <i class="bi bi-person me-2"></i>Informações do Cliente
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="text-center mb-3">
+                    <div class="avatar-lg bg-primary rounded-circle d-inline-flex align-items-center justify-content-center">
+                        <span class="text-white fs-3">{{ horario.cadastro.nome[:1]|upper }}</span>
+                    </div>
+                    <h5 class="mt-3">{{ horario.cadastro.nome }}</h5>
+                    <p class="text-muted">{{ horario.cadastro.email }}</p>
+                </div>
+                
+                <div class="list-group list-group-flush">
+                    {% if horario.cadastro.telefone %}
+                    <div class="list-group-item d-flex justify-content-between">
+                        <span>Telefone:</span>
+                        <strong>{{ horario.cadastro.telefone }}</strong>
+                    </div>
+                    {% endif %}
+                    
+                    {% if horario.cadastro.documento %}
+                    <div class="list-group-item d-flex justify-content-between">
+                        <span>Documento:</span>
+                        <strong>{{ horario.cadastro.documento }}</strong>
+                    </div>
+                    {% endif %}
+                    
+                    <div class="list-group-item d-flex justify-content-between">
+                        <span>Total Agendamentos:</span>
+                        <span class="badge bg-primary">{{ horario.cadastro.horarios|length }}</span>
+                    </div>
+                    
+                    <div class="list-group-item">
+                        <a href="{{ url_for('visualizar_cadastro', id=horario.cadastro_id) }}" 
+                           class="btn btn-outline-primary w-100">
+                            <i class="bi bi-person-lines-fill"></i> Ver Perfil Completo
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Dicas de Alteração -->
+        <div class="card">
+            <div class="card-body">
+                <h6><i class="bi bi-exclamation-triangle me-2"></i>Atenção</h6>
+                <ul class="mb-0 small">
+                    <li>Alterações afetam a disponibilidade de horários</li>
+                    <li>O cliente será notificado automaticamente</li>
+                    <li>Verifique conflitos com outros agendamentos</li>
+                    <li>Histórico de alterações é mantido</li>
+                    <li>Cancelamentos requerem justificativa</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.timeline {
+    position: relative;
+    padding-left: 30px;
+}
+.timeline-item {
+    position: relative;
+    margin-bottom: 20px;
+}
+.timeline-marker {
+    position: absolute;
+    left: -30px;
+    top: 0;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    border: 3px solid white;
+    box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.2);
+}
+.timeline-content {
+    background: var(--light-color);
+    padding: 15px;
+    border-radius: var(--border-radius-sm);
+    border-left: 3px solid var(--primary-color);
+}
+.avatar-lg {
+    width: 80px;
+    height: 80px;
+}
+</style>
+
+<script>
+$(document).ready(function() {
+    // Atualizar contador de caracteres
+    $('#descricao').on('input', function() {
+        const length = $(this).val().length;
+        $('#charCounter').text(`${length}/500 caracteres`);
+    });
+    
+    // Atualizar resumo das alterações
+    function atualizarResumoAlteracoes() {
+        const novaData = $('#data').val();
+        const novoInicio = $('#hora_inicio').val();
+        const novoFim = $('#hora_fim').val();
+        const novoStatus = $('#status').val();
+        const novoCliente = $('#cadastro_id option:selected').text().split(' - ')[0];
+        
+        if (novaData) {
+            const [ano, mes, dia] = novaData.split('-');
+            $('#novaData').text(`${dia}/${mes}/${ano}`);
+        } else {
+            $('#novaData').text('--/--/----');
+        }
+        
+        if (novoInicio && novoFim) {
+            $('#novoHorario').text(`${novoInicio} às ${novoFim}`);
+        } else {
+            $('#novoHorario').text('--:-- às --:--');
+        }
+        
+        if (novoStatus) {
+            $('#novoStatus').text(novoStatus.charAt(0).toUpperCase() + novoStatus.slice(1));
+            // Atualizar cor do badge
+            const cores = {
+                'agendado': 'bg-primary',
+                'confirmado': 'bg-success', 
+                'realizado': 'bg-secondary',
+                'cancelado': 'bg-danger',
+                'pendente': 'bg-warning'
+            };
+            $('#novoStatus').removeClass().addClass('badge ' + (cores[novoStatus] || 'bg-primary'));
+        }
+        
+        if (novoCliente && novoCliente !== 'Selecione um cliente...') {
+            $('#novoCliente').text(novoCliente);
+        }
+    }
+    
+    // Atualizar ao alterar campos
+    $('#data, #hora_inicio, #hora_fim, #status, #cadastro_id').on('change', atualizarResumoAlteracoes);
+    
+    // Validação do formulário
+    $('form').on('submit', function(e) {
+        const inicio = $('#hora_inicio').val();
+        const fim = $('#hora_fim').val();
+        
+        if (inicio && fim) {
+            const inicioParts = inicio.split(':');
+            const fimParts = fim.split(':');
+            const inicioMin = parseInt(inicioParts[0]) * 60 + parseInt(inicioParts[1]);
+            const fimMin = parseInt(fimParts[0]) * 60 + parseInt(fimParts[1]);
+            
+            if (fimMin <= inicioMin) {
+                e.preventDefault();
+                showError('A hora de término deve ser posterior à hora de início');
+                return false;
+            }
+        }
+        
+        // Verificar se houve alterações
+        const dataOriginal = '{{ horario.data.strftime("%Y-%m-%d") }}';
+        const inicioOriginal = '{{ horario.hora_inicio.strftime("%H:%M") }}';
+        const fimOriginal = '{{ horario.hora_fim.strftime("%H:%M") }}';
+        const clienteOriginal = '{{ horario.cadastro_id }}';
+        
+        const dataAlterada = $('#data').val();
+        const inicioAlterado = $('#hora_inicio').val();
+        const fimAlterado = $('#hora_fim').val();
+        const clienteAlterado = $('#cadastro_id').val();
+        
+        if (!dataAlterada && !inicioAlterado && !fimAlterado && 
+            clienteAlterado == clienteOriginal && 
+            $('#descricao').val() == '{{ horario.descricao or "" }}') {
+            if (confirm('Nenhuma alteração foi feita. Deseja continuar?')) {
+                return true;
+            } else {
+                e.preventDefault();
+                return false;
+            }
+        }
+        
+        return true;
+    });
+    
+    // Inicializar
+    atualizarResumoAlteracoes();
+});
+</script>
+{% endblock %}

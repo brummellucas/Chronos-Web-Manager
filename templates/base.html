@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema de Agendamento - {% block title %}Dashboard{% endblock %}</title>
+    
+    <!-- Bootstrap 5 -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.1/font/bootstrap-icons.css">
+    <!-- DataTables -->
+    <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.11.5/css/dataTables.bootstrap5.min.css">
+    <!-- Flatpickr (para datas) -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    
+    <style>
+        :root {
+            --primary-color: #4361ee;
+            --secondary-color: #3a0ca3;
+            --success-color: #4cc9f0;
+            --light-color: #f8f9fa;
+        }
+        
+        body {
+            background-color: #f5f7fb;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        .sidebar {
+            background: linear-gradient(180deg, var(--primary-color), var(--secondary-color));
+            color: white;
+            min-height: 100vh;
+            padding: 0;
+        }
+        
+        .sidebar .nav-link {
+            color: rgba(255, 255, 255, 0.8);
+            padding: 12px 20px;
+            margin: 5px 10px;
+            border-radius: 8px;
+            transition: all 0.3s;
+        }
+        
+        .sidebar .nav-link:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+            color: white;
+        }
+        
+        .sidebar .nav-link.active {
+            background-color: rgba(255, 255, 255, 0.2);
+            color: white;
+        }
+        
+        .sidebar .nav-link i {
+            width: 20px;
+            margin-right: 10px;
+        }
+        
+        .card {
+            border: none;
+            border-radius: 15px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s;
+        }
+        
+        .card:hover {
+            transform: translateY(-5px);
+        }
+        
+        .card-header {
+            background-color: white;
+            border-bottom: 2px solid var(--primary-color);
+            font-weight: 600;
+        }
+        
+        .btn-primary {
+            background-color: var(--primary-color);
+            border-color: var(--primary-color);
+        }
+        
+        .btn-primary:hover {
+            background-color: var(--secondary-color);
+            border-color: var(--secondary-color);
+        }
+        
+        .stat-card {
+            border-left: 4px solid var(--primary-color);
+        }
+        
+        .table-hover tbody tr:hover {
+            background-color: rgba(67, 97, 238, 0.05);
+        }
+        
+        .badge-agendado {
+            background-color: #4cc9f0;
+        }
+        
+        .badge-cancelado {
+            background-color: #f72585;
+        }
+        
+        .badge-concluido {
+            background-color: #4caf50;
+        }
+    </style>
+    
+    {% block styles %}{% endblock %}
+</head>
+<body>
+    <div class="container-fluid">
+        <div class="row">
+            <!-- Sidebar -->
+            <div class="col-md-3 col-lg-2 sidebar d-md-block">
+                <div class="position-sticky pt-3">
+                    <h4 class="text-center mt-3 mb-4">
+                        <i class="bi bi-calendar-check"></i> Agendamento
+                    </h4>
+                    
+                    <ul class="nav flex-column">
+                        <li class="nav-item">
+                            <a class="nav-link {% if request.endpoint == 'index' %}active{% endif %}" 
+                               href="{{ url_for('index') }}">
+                                <i class="bi bi-house"></i> Dashboard
+                            </a>
+                        </li>
+                        
+                        <li class="nav-item">
+                            <a class="nav-link {% if 'cadastros' in request.endpoint %}active{% endif %}" 
+                               href="{{ url_for('listar_cadastros') }}">
+                                <i class="bi bi-people"></i> Cadastros
+                            </a>
+                        </li>
+                        
+                        <li class="nav-item">
+                            <a class="nav-link {% if 'horarios' in request.endpoint %}active{% endif %}" 
+                               href="{{ url_for('listar_horarios') }}">
+                                <i class="bi bi-clock"></i> Horários
+                            </a>
+                        </li>
+                        
+                        <li class="nav-item mt-4">
+                            <div class="px-3">
+                                <small class="text-muted">RELATÓRIOS</small>
+                            </div>
+                        </li>
+                        
+                        <li class="nav-item">
+                            <a class="nav-link" href="#" data-bs-toggle="modal" data-bs-target="#relatorioModal">
+                                <i class="bi bi-graph-up"></i> Relatório
+                            </a>
+                        </li>
+                    </ul>
+                    
+                    <div class="mt-5 px-3">
+                        <small class="text-muted">SISTEMA</small>
+                        <div class="d-grid gap-2 mt-2">
+                            <a href="#" class="btn btn-outline-light btn-sm">
+                                <i class="bi bi-gear"></i> Configurações
+                            </a>
+                            <a href="#" class="btn btn-outline-light btn-sm">
+                                <i class="bi bi-box-arrow-right"></i> Sair
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Main content -->
+            <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4 py-4">
+                <!-- Flash Messages -->
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                    {% if messages %}
+                        {% for category, message in messages %}
+                            <div class="alert alert-{{ 'danger' if category == 'error' else category }} alert-dismissible fade show" role="alert">
+                                {% if category == 'success' %}
+                                    <i class="bi bi-check-circle me-2"></i>
+                                {% elif category == 'error' %}
+                                    <i class="bi bi-exclamation-triangle me-2"></i>
+                                {% endif %}
+                                {{ message }}
+                                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+                {% endwith %}
+
+                <!-- Page Header -->
+                <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+                    <h1 class="h2">{% block page_title %}Dashboard{% endblock %}</h1>
+                    <div class="btn-toolbar mb-2 mb-md-0">
+                        {% block page_actions %}{% endblock %}
+                    </div>
+                </div>
+
+                <!-- Page Content -->
+                {% block content %}{% endblock %}
+            </main>
+        </div>
+    </div>
+
+    <!-- Relatório Modal -->
+    <div class="modal fade" id="relatorioModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Gerar Relatório</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="relatorioForm">
+                        <div class="mb-3">
+                            <label class="form-label">Período</label>
+                            <div class="input-group">
+                                <input type="date" class="form-control" id="dataInicio" required>
+                                <span class="input-group-text">até</span>
+                                <input type="date" class="form-control" id="dataFim" required>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Tipo de Relatório</label>
+                            <select class="form-select" id="tipoRelatorio">
+                                <option value="horarios">Horários Agendados</option>
+                                <option value="cadastros">Novos Cadastros</option>
+                                <option value="completo">Relatório Completo</option>
+                            </select>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-primary" onclick="gerarRelatorio()">
+                        <i class="bi bi-download"></i> Gerar Relatório
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/1.11.5/js/dataTables.bootstrap5.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    
+    <script>
+        // Inicializar DataTables
+        $(document).ready(function() {
+            $('.data-table').DataTable({
+                language: {
+                    url: '//cdn.datatables.net/plug-ins/1.11.5/i18n/pt-BR.json'
+                },
+                pageLength: 10
+            });
+            
+            // Inicializar datepickers
+            flatpickr("input[type='date']", {
+                dateFormat: "Y-m-d",
+                locale: "pt"
+            });
+            
+            flatpickr("input[type='time']", {
+                enableTime: true,
+                noCalendar: true,
+                dateFormat: "H:i",
+                time_24hr: true
+            });
+        });
+        
+        function gerarRelatorio() {
+            const dataInicio = $('#dataInicio').val();
+            const dataFim = $('#dataFim').val();
+            const tipo = $('#tipoRelatorio').val();
+            
+            if (!dataInicio || !dataFim) {
+                Swal.fire('Atenção!', 'Selecione o período do relatório.', 'warning');
+                return;
+            }
+            
+            // Aqui você implementaria a geração do relatório
+            Swal.fire({
+                title: 'Relatório Gerado!',
+                text: `Relatório de ${tipo} gerado para o período ${dataInicio} até ${dataFim}`,
+                icon: 'success',
+                showCancelButton: true,
+                confirmButtonText: 'Baixar PDF',
+                cancelButtonText: 'Fechar'
+            });
+            
+            $('#relatorioModal').modal('hide');
+        }
+        
+        function confirmarExclusao(url, mensagem) {
+            Swal.fire({
+                title: 'Tem certeza?',
+                text: mensagem || 'Esta ação não pode ser desfeita!',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                cancelButtonColor: '#3085d6',
+                confirmButtonText: 'Sim, excluir!',
+                cancelButtonText: 'Cancelar'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    window.location.href = url;
+                }
+            });
+        }
+    </script>
+    
+    {% block scripts %}{% endblock %}
+</body>
+</html>

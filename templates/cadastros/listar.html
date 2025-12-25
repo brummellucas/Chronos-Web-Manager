@@ -1,0 +1,154 @@
+{% extends "base.html" %}
+
+{% block title %}Cadastros{% endblock %}
+{% block page_title %}Gerenciar Cadastros{% endblock %}
+
+{% block page_actions %}
+<div class="btn-group">
+    <a href="{{ url_for('criar_cadastro') }}" class="btn btn-primary">
+        <i class="bi bi-person-plus"></i> Novo Cadastro
+    </a>
+    <button type="button" class="btn btn-primary dropdown-toggle dropdown-toggle-split" 
+            data-bs-toggle="dropdown">
+        <span class="visually-hidden">Menu</span>
+    </button>
+    <ul class="dropdown-menu">
+        <li><a class="dropdown-item" href="#">
+            <i class="bi bi-download"></i> Exportar CSV
+        </a></li>
+        <li><a class="dropdown-item" href="#">
+            <i class="bi bi-printer"></i> Imprimir Lista
+        </a></li>
+    </ul>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-8">
+        <div class="input-group">
+            <span class="input-group-text">
+                <i class="bi bi-search"></i>
+            </span>
+            <input type="text" class="form-control" placeholder="Buscar cadastros..." 
+                   id="searchInput">
+            <button class="btn btn-outline-secondary" type="button" id="searchButton">
+                Buscar
+            </button>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="d-flex justify-content-end">
+            <span class="badge bg-primary p-2 me-2">
+                Total: {{ total }}
+            </span>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover data-table">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Nome</th>
+                        <th>Contato</th>
+                        <th>Documento</th>
+                        <th>Agendamentos</th>
+                        <th>Cadastro</th>
+                        <th class="text-end">Ações</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for cadastro in cadastros %}
+                    <tr>
+                        <td>{{ cadastro.id }}</td>
+                        <td>
+                            <div class="d-flex align-items-center">
+                                <div class="avatar-sm bg-primary rounded-circle d-flex align-items-center justify-content-center me-2">
+                                    <span class="text-white">{{ cadastro.nome[:1]|upper }}</span>
+                                </div>
+                                <div>
+                                    <strong>{{ cadastro.nome }}</strong><br>
+                                    <small class="text-muted">{{ cadastro.email }}</small>
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            {% if cadastro.telefone %}
+                            <i class="bi bi-telephone me-1"></i>{{ cadastro.telefone }}
+                            {% else %}
+                            <span class="text-muted">Não informado</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if cadastro.documento %}
+                            <span class="badge bg-info">{{ cadastro.documento }}</span>
+                            {% else %}
+                            <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <span class="badge bg-success">{{ cadastro.horarios|length }}</span>
+                        </td>
+                        <td>
+                            <small class="text-muted">
+                                {{ cadastro.data_criacao.strftime('%d/%m/%Y') }}
+                            </small>
+                        </td>
+                        <td class="text-end">
+                            <div class="btn-group">
+                                <a href="{{ url_for('visualizar_cadastro', id=cadastro.id) }}" 
+                                   class="btn btn-sm btn-outline-primary" title="Visualizar">
+                                    <i class="bi bi-eye"></i>
+                                </a>
+                                <a href="{{ url_for('editar_cadastro', id=cadastro.id) }}" 
+                                   class="btn btn-sm btn-outline-success" title="Editar">
+                                    <i class="bi bi-pencil"></i>
+                                </a>
+                                <button type="button" 
+                                        class="btn btn-sm btn-outline-danger" 
+                                        title="Excluir"
+                                        onclick="confirmarExclusao('{{ url_for('deletar_cadastro', id=cadastro.id) }}', 
+                                        'Tem certeza que deseja excluir o cadastro de {{ cadastro.nome }}?')">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="7" class="text-center py-5">
+                            <div class="text-muted">
+                                <i class="bi bi-people fs-1"></i>
+                                <h5 class="mt-3">Nenhum cadastro encontrado</h5>
+                                <p>Clique em "Novo Cadastro" para adicionar o primeiro</p>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+    $(document).ready(function() {
+        $('#searchButton').click(function() {
+            const searchTerm = $('#searchInput').val();
+            if (searchTerm) {
+                window.location.href = "{{ url_for('listar_cadastros') }}?filtro=" + encodeURIComponent(searchTerm);
+            }
+        });
+        
+        $('#searchInput').keypress(function(e) {
+            if (e.which === 13) {
+                $('#searchButton').click();
+            }
+        });
+    });
+</script>
+{% endblock %}

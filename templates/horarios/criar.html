@@ -1,0 +1,519 @@
+{% extends "base.html" %}
+
+{% block title %}Novo Horário{% endblock %}
+{% block page_title %}Agendar Novo Horário{% endblock %}
+
+{% block page_actions %}
+<a href="{{ url_for('listar_horarios') }}" class="btn btn-outline-secondary">
+    <i class="bi bi-arrow-left"></i> Voltar
+</a>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="bi bi-calendar-plus me-2"></i>Novo Agendamento
+                </h5>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('criar_horario') }}" id="horarioForm">
+                    <!-- Seção 1: Seleção do Cliente -->
+                    <div class="mb-4">
+                        <h6 class="border-bottom pb-2 mb-3">
+                            <i class="bi bi-person me-2"></i>Seleção do Cliente
+                        </h6>
+                        <div class="row">
+                            <div class="col-md-12 mb-3">
+                                <label for="cadastro_id" class="form-label">Cliente *</label>
+                                <select class="form-select select2" id="cadastro_id" name="cadastro_id" required>
+                                    <option value="">Selecione um cliente...</option>
+                                    {% for cadastro in cadastros %}
+                                    <option value="{{ cadastro.id }}" 
+                                            {% if request.args.get('cadastro')|string == cadastro.id|string %}selected{% endif %}>
+                                        {{ cadastro.nome }} - {{ cadastro.email }}
+                                        {% if cadastro.telefone %} ({{ cadastro.telefone }}){% endif %}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                                <div class="form-text">
+                                    <a href="{{ url_for('criar_cadastro') }}" class="text-decoration-none">
+                                        <i class="bi bi-plus-circle"></i> Cadastrar novo cliente
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Informações do Cliente Selecionado -->
+                        <div id="clienteInfo" class="card bg-light d-none">
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <p class="mb-1"><strong>Nome:</strong> <span id="clienteNome"></span></p>
+                                        <p class="mb-1"><strong>Email:</strong> <span id="clienteEmail"></span></p>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <p class="mb-1"><strong>Telefone:</strong> <span id="clienteTelefone"></span></p>
+                                        <p class="mb-1"><strong>Total Agendamentos:</strong> <span id="clienteTotal"></span></p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Seção 2: Data e Hora -->
+                    <div class="mb-4">
+                        <h6 class="border-bottom pb-2 mb-3">
+                            <i class="bi bi-clock me-2"></i>Data e Horário
+                        </h6>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="data" class="form-label">Data *</label>
+                                <input type="date" class="form-control" id="data" name="data" 
+                                       value="{{ hoje }}" min="{{ hoje }}" required>
+                                <div class="form-text">Selecione a data do agendamento</div>
+                            </div>
+                            <div class="col-md-3 mb-3">
+                                <label for="hora_inicio" class="form-label">Hora Início *</label>
+                                <input type="time" class="form-control" id="hora_inicio" 
+                                       name="hora_inicio" min="08:00" max="18:00" required>
+                                <div class="form-text">Ex: 09:00</div>
+                            </div>
+                            <div class="col-md-3 mb-3">
+                                <label for="hora_fim" class="form-label">Hora Fim *</label>
+                                <input type="time" class="form-control" id="hora_fim" 
+                                       name="hora_fim" min="08:00" max="19:00" required>
+                                <div class="form-text">Ex: 10:00</div>
+                            </div>
+                        </div>
+                        
+                        <!-- Verificação de Disponibilidade -->
+                        <div id="disponibilidadeCheck" class="alert alert-info d-none">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <i class="bi bi-info-circle me-2"></i>
+                                    <span id="disponibilidadeMsg">Verificando disponibilidade...</span>
+                                </div>
+                                <div id="disponibilidadeStatus"></div>
+                            </div>
+                        </div>
+                        
+                        <!-- Horários Ocupados -->
+                        <div id="horariosOcupados" class="mt-3 d-none">
+                            <h6 class="text-danger">
+                                <i class="bi bi-exclamation-triangle me-2"></i>Horários Ocupados neste dia:
+                            </h6>
+                            <div id="listaOcupados" class="list-group"></div>
+                        </div>
+                    </div>
+
+                    <!-- Seção 3: Detalhes do Agendamento -->
+                    <div class="mb-4">
+                        <h6 class="border-bottom pb-2 mb-3">
+                            <i class="bi bi-card-text me-2"></i>Detalhes do Agendamento
+                        </h6>
+                        <div class="row">
+                            <div class="col-md-12 mb-3">
+                                <label for="descricao" class="form-label">Descrição / Serviço</label>
+                                <textarea class="form-control" id="descricao" name="descricao" 
+                                          rows="4" placeholder="Descreva o serviço ou observações..."></textarea>
+                                <div class="form-text">
+                                    <span id="charCounter">0/500 caracteres</span>
+                                </div>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Tipo de Serviço</label>
+                                <select class="form-select" name="tipo_servico">
+                                    <option value="">Selecione...</option>
+                                    <option value="consulta">Consulta</option>
+                                    <option value="retorno">Retorno</option>
+                                    <option value="exame">Exame</option>
+                                    <option value="procedimento">Procedimento</option>
+                                    <option value="outro">Outro</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Status Inicial</label>
+                                <select class="form-select" name="status">
+                                    <option value="agendado" selected>Agendado</option>
+                                    <option value="confirmado">Confirmado</option>
+                                    <option value="pendente">Pendente</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Resumo -->
+                    <div class="card bg-light mb-4">
+                        <div class="card-header">
+                            <h6 class="mb-0">
+                                <i class="bi bi-card-checklist me-2"></i>Resumo do Agendamento
+                            </h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <p class="mb-2"><strong>Data:</strong> <span id="resumoData">--/--/----</span></p>
+                                    <p class="mb-2"><strong>Horário:</strong> <span id="resumoHorario">--:-- às --:--</span></p>
+                                    <p class="mb-2"><strong>Duração:</strong> <span id="resumoDuracao">0 min</span></p>
+                                </div>
+                                <div class="col-md-6">
+                                    <p class="mb-2"><strong>Cliente:</strong> <span id="resumoCliente">Não selecionado</span></p>
+                                    <p class="mb-2"><strong>Serviço:</strong> <span id="resumoServico">Não especificado</span></p>
+                                    <p class="mb-2"><strong>Status:</strong> <span class="badge bg-primary">Agendado</span></p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Botões de Ação -->
+                    <div class="d-flex justify-content-between">
+                        <button type="submit" class="btn btn-primary btn-lg">
+                            <i class="bi bi-check-lg"></i> Confirmar Agendamento
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary" 
+                                onclick="window.history.back()">
+                            <i class="bi bi-x-lg"></i> Cancelar
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <!-- Calendário para Seleção -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h6 class="mb-0">
+                    <i class="bi bi-calendar3 me-2"></i>Calendário
+                </h6>
+            </div>
+            <div class="card-body">
+                <div id="miniCalendar"></div>
+            </div>
+        </div>
+        
+        <!-- Horários Disponíveis -->
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0">
+                    <i class="bi bi-clock-history me-2"></i>Horários Disponíveis
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label class="form-label">Selecione uma data:</label>
+                    <input type="date" class="form-control" id="dataDisponivel" 
+                           value="{{ hoje }}">
+                </div>
+                <div id="listaDisponiveis" class="list-group" style="max-height: 300px; overflow-y: auto;">
+                    <div class="text-center text-muted py-3">
+                        <i class="bi bi-calendar-event fs-4"></i>
+                        <p class="mt-2">Selecione uma data para ver os horários</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Dicas e Informações -->
+        <div class="card mt-4">
+            <div class="card-body">
+                <h6><i class="bi bi-lightbulb me-2"></i>Dicas</h6>
+                <ul class="mb-0 small">
+                    <li>Verifique a disponibilidade antes de confirmar</li>
+                    <li>Horários padrão: 08:00 às 18:00</li>
+                    <li>Intervalo mínimo: 30 minutos</li>
+                    <li>Máximo 2 agendamentos por cliente/dia</li>
+                    <li>Confirme por telefone ou email</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<link href='https://cdn.jsdelivr.net/npm/fullcalendar@5.10.1/main.min.css' rel='stylesheet' />
+<script src='https://cdn.jsdelivr.net/npm/fullcalendar@5.10.1/main.min.js'></script>
+<script src='https://cdn.jsdelivr.net/npm/fullcalendar@5.10.1/locales/pt-br.min.js'></script>
+
+<script>
+$(document).ready(function() {
+    // Inicializar select2
+    if ($.fn.select2) {
+        $('#cadastro_id').select2({
+            theme: 'bootstrap-5',
+            width: '100%',
+            placeholder: 'Selecione um cliente...',
+            allowClear: true,
+            language: 'pt-BR'
+        });
+    }
+    
+    // Inicializar mini calendário
+    const calendarEl = document.getElementById('miniCalendar');
+    if (calendarEl) {
+        const calendar = new FullCalendar.Calendar(calendarEl, {
+            initialView: 'dayGridMonth',
+            locale: 'pt-br',
+            headerToolbar: {
+                left: 'prev',
+                center: 'title',
+                right: 'next'
+            },
+            height: 250,
+            dateClick: function(info) {
+                $('#data').val(info.dateStr);
+                $('#dataDisponivel').val(info.dateStr);
+                verificarDisponibilidade();
+                carregarHorariosDisponiveis(info.dateStr);
+            },
+            events: [
+                {% for horario in eventos_calendario %}
+                {
+                    title: '{{ horario.cadastro.nome[:10] }}...',
+                    start: '{{ horario.data.strftime("%Y-%m-%d") }}',
+                    color: '#4361ee'
+                },
+                {% endfor %}
+            ]
+        });
+        calendar.render();
+    }
+    
+    // Atualizar resumo
+    function atualizarResumo() {
+        const data = $('#data').val();
+        const inicio = $('#hora_inicio').val();
+        const fim = $('#hora_fim').val();
+        const cliente = $('#cadastro_id option:selected').text();
+        const descricao = $('#descricao').val();
+        
+        if (data) {
+            const [ano, mes, dia] = data.split('-');
+            $('#resumoData').text(`${dia}/${mes}/${ano}`);
+        }
+        
+        if (inicio && fim) {
+            $('#resumoHorario').text(`${inicio} às ${fim}`);
+            
+            // Calcular duração
+            const inicioParts = inicio.split(':');
+            const fimParts = fim.split(':');
+            const inicioMin = parseInt(inicioParts[0]) * 60 + parseInt(inicioParts[1]);
+            const fimMin = parseInt(fimParts[0]) * 60 + parseInt(fimParts[1]);
+            const duracao = fimMin - inicioMin;
+            
+            if (duracao > 0) {
+                const horas = Math.floor(duracao / 60);
+                const minutos = duracao % 60;
+                let duracaoText = '';
+                if (horas > 0) duracaoText += `${horas}h `;
+                if (minutos > 0) duracaoText += `${minutos}min`;
+                $('#resumoDuracao').text(duracaoText);
+            }
+        }
+        
+        if (cliente && cliente !== 'Selecione um cliente...') {
+            $('#resumoCliente').text(cliente.split(' - ')[0]);
+        }
+        
+        if (descricao) {
+            $('#resumoServico').text(descricao.length > 30 ? descricao.substring(0, 30) + '...' : descricao);
+        }
+    }
+    
+    // Contador de caracteres
+    $('#descricao').on('input', function() {
+        const length = $(this).val().length;
+        $('#charCounter').text(`${length}/500 caracteres`);
+        atualizarResumo();
+    });
+    
+    // Eventos para atualizar resumo
+    $('#data, #hora_inicio, #hora_fim, #cadastro_id').on('change', function() {
+        atualizarResumo();
+        if (this.id === 'data' || this.id === 'hora_inicio' || this.id === 'hora_fim') {
+            verificarDisponibilidade();
+        }
+        if (this.id === 'cadastro_id') {
+            carregarInfoCliente($(this).val());
+        }
+    });
+    
+    // Carregar informações do cliente
+    function carregarInfoCliente(clienteId) {
+        if (!clienteId) {
+            $('#clienteInfo').addClass('d-none');
+            return;
+        }
+        
+        // Em produção, fazer chamada AJAX
+        // Simulação:
+        const clientes = {
+            {% for cadastro in cadastros %}
+            "{{ cadastro.id }}": {
+                nome: "{{ cadastro.nome }}",
+                email: "{{ cadastro.email }}",
+                telefone: "{{ cadastro.telefone or 'Não informado' }}",
+                total: {{ cadastro.horarios|length or 0 }}
+            },
+            {% endfor %}
+        };
+        
+        const cliente = clientes[clienteId];
+        if (cliente) {
+            $('#clienteNome').text(cliente.nome);
+            $('#clienteEmail').text(cliente.email);
+            $('#clienteTelefone').text(cliente.telefone);
+            $('#clienteTotal').text(cliente.total);
+            $('#clienteInfo').removeClass('d-none');
+        }
+    }
+    
+    // Verificar disponibilidade
+    function verificarDisponibilidade() {
+        const data = $('#data').val();
+        const inicio = $('#hora_inicio').val();
+        const fim = $('#hora_fim').val();
+        
+        if (!data || !inicio || !fim) {
+            $('#disponibilidadeCheck').addClass('d-none');
+            return;
+        }
+        
+        $('#disponibilidadeCheck').removeClass('d-none');
+        $('#disponibilidadeMsg').html('<i class="bi bi-hourglass-split"></i> Verificando disponibilidade...');
+        
+        // Simular verificação (em produção, fazer AJAX)
+        setTimeout(() => {
+            const ocupados = Math.random() > 0.7; // 30% de chance de estar ocupado
+            if (ocupados) {
+                $('#disponibilidadeMsg').html('<i class="bi bi-x-circle text-danger"></i> Horário ocupado!');
+                $('#disponibilidadeStatus').html('<span class="badge bg-danger">Indisponível</span>');
+                $('#disponibilidadeCheck').removeClass('alert-info').addClass('alert-danger');
+                
+                // Mostrar horários ocupados (exemplo)
+                $('#listaOcupados').html(`
+                    <div class="list-group-item">
+                        <div class="d-flex justify-content-between">
+                            <span>09:00 - 10:00</span>
+                            <small class="text-muted">João Silva</small>
+                        </div>
+                    </div>
+                    <div class="list-group-item">
+                        <div class="d-flex justify-content-between">
+                            <span>14:00 - 15:00</span>
+                            <small class="text-muted">Maria Santos</small>
+                        </div>
+                    </div>
+                `);
+                $('#horariosOcupados').removeClass('d-none');
+            } else {
+                $('#disponibilidadeMsg').html('<i class="bi bi-check-circle text-success"></i> Horário disponível!');
+                $('#disponibilidadeStatus').html('<span class="badge bg-success">Disponível</span>');
+                $('#disponibilidadeCheck').removeClass('alert-info alert-danger').addClass('alert-success');
+                $('#horariosOcupados').addClass('d-none');
+            }
+        }, 1000);
+    }
+    
+    // Carregar horários disponíveis
+    function carregarHorariosDisponiveis(data) {
+        $('#listaDisponiveis').html(`
+            <div class="text-center py-3">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Carregando...</span>
+                </div>
+                <p class="mt-2">Carregando horários...</p>
+            </div>
+        `);
+        
+        // Simular carregamento (em produção, fazer AJAX)
+        setTimeout(() => {
+            const horarios = [
+                '08:00 - 09:00', '09:00 - 10:00', '10:00 - 11:00',
+                '11:00 - 12:00', '13:00 - 14:00', '14:00 - 15:00',
+                '15:00 - 16:00', '16:00 - 17:00', '17:00 - 18:00'
+            ];
+            
+            let html = '';
+            horarios.forEach(horario => {
+                const [inicio, fim] = horario.split(' - ');
+                html += `
+                    <button type="button" class="list-group-item list-group-item-action horario-disponivel" 
+                            data-inicio="${inicio}" data-fim="${fim}">
+                        <div class="d-flex justify-content-between">
+                            <strong>${horario}</strong>
+                            <span class="badge bg-success">Disponível</span>
+                        </div>
+                        <small class="text-muted">Clique para selecionar</small>
+                    </button>
+                `;
+            });
+            
+            $('#listaDisponiveis').html(html || `
+                <div class="text-center text-muted py-3">
+                    <i class="bi bi-calendar-x fs-4"></i>
+                    <p class="mt-2">Nenhum horário disponível</p>
+                </div>
+            `);
+        }, 800);
+    }
+    
+    // Selecionar horário disponível
+    $(document).on('click', '.horario-disponivel', function() {
+        const inicio = $(this).data('inicio');
+        const fim = $(this).data('fim');
+        $('#hora_inicio').val(inicio);
+        $('#hora_fim').val(fim);
+        atualizarResumo();
+        verificarDisponibilidade();
+        
+        // Feedback visual
+        $('.horario-disponivel').removeClass('active');
+        $(this).addClass('active');
+    });
+    
+    // Data disponível change
+    $('#dataDisponivel').on('change', function() {
+        $('#data').val($(this).val());
+        carregarHorariosDisponiveis($(this).val());
+        atualizarResumo();
+    });
+    
+    // Validação do formulário
+    $('#horarioForm').on('submit', function(e) {
+        const inicio = $('#hora_inicio').val();
+        const fim = $('#hora_fim').val();
+        
+        if (inicio && fim) {
+            const inicioParts = inicio.split(':');
+            const fimParts = fim.split(':');
+            const inicioMin = parseInt(inicioParts[0]) * 60 + parseInt(inicioParts[1]);
+            const fimMin = parseInt(fimParts[0]) * 60 + parseInt(fimParts[1]);
+            
+            if (fimMin <= inicioMin) {
+                e.preventDefault();
+                showError('A hora de término deve ser posterior à hora de início');
+                return false;
+            }
+            
+            if ((fimMin - inicioMin) < 30) {
+                e.preventDefault();
+                showError('A duração mínima é de 30 minutos');
+                return false;
+            }
+        }
+        
+        return true;
+    });
+    
+    // Inicializar
+    atualizarResumo();
+    verificarDisponibilidade();
+    carregarHorariosDisponiveis($('#data').val());
+});
+</script>
+{% endblock %}

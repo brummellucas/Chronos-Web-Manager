@@ -1,0 +1,628 @@
+{% extends "base.html" %}
+
+{% block title %}Horário #{{ horario.id }}{% endblock %}
+{% block page_title %}Detalhes do Agendamento{% endblock %}
+
+{% block page_actions %}
+<div class="btn-group">
+    <a href="{{ url_for('listar_horarios') }}" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left"></i> Voltar
+    </a>
+    <a href="{{ url_for('editar_horario', id=horario.id) }}" class="btn btn-primary">
+        <i class="bi bi-pencil"></i> Editar
+    </a>
+    <button type="button" class="btn btn-primary dropdown-toggle dropdown-toggle-split" 
+            data-bs-toggle="dropdown">
+        <span class="visually-hidden">Menu</span>
+    </button>
+    <ul class="dropdown-menu">
+        <li><a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#confirmModal">
+            <i class="bi bi-check-circle"></i> Confirmar Agendamento
+        </a></li>
+        <li><a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#cancelModal">
+            <i class="bi bi-x-circle"></i> Cancelar Agendamento
+        </a></li>
+        <li><hr class="dropdown-divider"></li>
+        <li><a class="dropdown-item" href="#">
+            <i class="bi bi-printer"></i> Imprimir Comprovante
+        </a></li>
+        <li><a class="dropdown-item" href="#">
+            <i class="bi bi-envelope"></i> Enviar por Email
+        </a></li>
+    </ul>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-8">
+        <!-- Card Principal -->
+        <div class="card mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">
+                    <i class="bi bi-calendar-event me-2"></i>Agendamento #{{ horario.id }}
+                </h5>
+                <div>
+                    {% if horario.status == 'agendado' %}
+                    <span class="badge bg-primary">Agendado</span>
+                    {% elif horario.status == 'confirmado' %}
+                    <span class="badge bg-success">Confirmado</span>
+                    {% elif horario.status == 'realizado' %}
+                    <span class="badge bg-secondary">Realizado</span>
+                    {% elif horario.status == 'cancelado' %}
+                    <span class="badge bg-danger">Cancelado</span>
+                    {% elif horario.status == 'pendente' %}
+                    <span class="badge bg-warning">Pendente</span>
+                    {% endif %}
+                    
+                    {% if horario.prioridade == 'alta' %}
+                    <span class="badge bg-danger ms-2">Alta Prioridade</span>
+                    {% elif horario.prioridade == 'urgente' %}
+                    <span class="badge bg-danger ms-2">URGENTE</span>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="info-box mb-4">
+                            <h6 class="text-muted mb-2">
+                                <i class="bi bi-calendar me-2"></i>Data e Hora
+                            </h6>
+                            <div class="d-flex align-items-center">
+                                <div class="bg-primary text-white rounded p-3 me-3">
+                                    <div class="text-center">
+                                        <div class="fs-4">{{ horario.data.strftime('%d') }}</div>
+                                        <div class="fs-6">{{ horario.data.strftime('%b')|upper }}</div>
+                                    </div>
+                                </div>
+                                <div>
+                                    <h4 class="mb-1">{{ horario.hora_inicio.strftime('%H:%M') }} - {{ horario.hora_fim.strftime('%H:%M') }}</h4>
+                                    <p class="text-muted mb-0">
+                                        {{ horario.data.strftime('%A')|title }}, {{ horario.data.strftime('%d de %B de %Y') }}
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="info-box mb-4">
+                            <h6 class="text-muted mb-2">
+                                <i class="bi bi-clock me-2"></i>Duração
+                            </h6>
+                            <div class="d-flex align-items-center">
+                                <div class="bg-info text-white rounded p-3 me-3">
+                                    <i class="bi bi-clock-history fs-3"></i>
+                                </div>
+                                <div>
+                                    <h4 class="mb-1">{{ duracao }}</h4>
+                                    <p class="text-muted mb-0">
+                                        {% set inicio = horario.hora_inicio %}
+                                        {% set fim = horario.hora_fim %}
+                                        {% set duracao_min = (fim.hour * 60 + fim.minute) - (inicio.hour * 60 + inicio.minute) %}
+                                        {% if duracao_min >= 60 %}
+                                        {{ duracao_min // 60 }} hora(s) e {{ duracao_min % 60 }} minuto(s)
+                                        {% else %}
+                                        {{ duracao_min }} minutos
+                                        {% endif %}
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <div class="info-box mb-4">
+                            <h6 class="text-muted mb-2">
+                                <i class="bi bi-person me-2"></i>Cliente
+                            </h6>
+                            <div class="d-flex align-items-center">
+                                <div class="avatar-xl bg-primary rounded-circle d-flex align-items-center justify-content-center me-3">
+                                    <span class="text-white fs-3">{{ horario.cadastro.nome[:1]|upper }}</span>
+                                </div>
+                                <div>
+                                    <h4 class="mb-1">{{ horario.cadastro.nome }}</h4>
+                                    <p class="text-muted mb-0">
+                                        <i class="bi bi-envelope me-1"></i>{{ horario.cadastro.email }}
+                                    </p>
+                                    {% if horario.cadastro.telefone %}
+                                    <p class="text-muted mb-0">
+                                        <i class="bi bi-telephone me-1"></i>{{ horario.cadastro.telefone }}
+                                    </p>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="info-box">
+                            <h6 class="text-muted mb-2">
+                                <i class="bi bi-card-text me-2"></i>Tipo de Serviço
+                            </h6>
+                            <div class="d-flex align-items-center">
+                                <div class="bg-success text-white rounded p-3 me-3">
+                                    <i class="bi bi-briefcase fs-3"></i>
+                                </div>
+                                <div>
+                                    <h4 class="mb-1">{{ horario.tipo_servico|title if horario.tipo_servico else 'Não especificado' }}</h4>
+                                    <p class="text-muted mb-0">
+                                        ID Cliente: {{ horario.cadastro_id }}
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Descrição -->
+                {% if horario.descricao %}
+                <div class="mt-4">
+                    <h6 class="text-muted mb-2">
+                        <i class="bi bi-card-text me-2"></i>Descrição do Serviço
+                    </h6>
+                    <div class="card bg-light">
+                        <div class="card-body">
+                            <p class="mb-0">{{ horario.descricao }}</p>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+                
+                <!-- Informações Adicionais -->
+                <div class="row mt-4">
+                    <div class="col-md-6">
+                        <div class="list-group">
+                            <div class="list-group-item d-flex justify-content-between align-items-center">
+                                <span>Data de Criação</span>
+                                <strong>{{ horario.data_criacao.strftime('%d/%m/%Y %H:%M') }}</strong>
+                            </div>
+                            <div class="list-group-item d-flex justify-content-between align-items-center">
+                                <span>Última Atualização</span>
+                                <strong>{{ horario.data_atualizacao.strftime('%d/%m/%Y %H:%M') if horario.data_atualizacao else 'Nunca' }}</strong>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="list-group">
+                            <div class="list-group-item d-flex justify-content-between align-items-center">
+                                <span>Criado Por</span>
+                                <strong>Sistema</strong>
+                            </div>
+                            <div class="list-group-item d-flex justify-content-between align-items-center">
+                                <span>Próximo do Cliente</span>
+                                <strong>{{ proximos_cliente }} agendamento(s)</strong>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Histórico de Ações -->
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="bi bi-activity me-2"></i>Histórico de Ações
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="timeline">
+                    {% for acao in historico %}
+                    <div class="timeline-item">
+                        <div class="timeline-marker {{ acao.cor }}"></div>
+                        <div class="timeline-content">
+                            <div class="d-flex justify-content-between">
+                                <h6>{{ acao.titulo }}</h6>
+                                <small class="text-muted">{{ acao.data.strftime('%d/%m/%Y %H:%M') }}</small>
+                            </div>
+                            <p class="text-muted mb-1">{{ acao.descricao }}</p>
+                            {% if acao.usuario %}
+                            <small class="text-muted">Por: {{ acao.usuario }}</small>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% else %}
+                    <div class="text-center text-muted py-4">
+                        <i class="bi bi-clock-history fs-1"></i>
+                        <p class="mt-2">Nenhuma ação registrada</p>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <!-- Ações Rápidas -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h6 class="mb-0">
+                    <i class="bi bi-lightning me-2"></i>Ações Rápidas
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#confirmModal">
+                        <i class="bi bi-check-circle"></i> Confirmar Agendamento
+                    </button>
+                    
+                    {% if horario.status != 'cancelado' %}
+                    <button class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#cancelModal">
+                        <i class="bi bi-x-circle"></i> Cancelar Agendamento
+                    </button>
+                    {% endif %}
+                    
+                    {% if horario.status == 'agendado' %}
+                    <button class="btn btn-warning" data-bs-toggle="modal" data-bs-target="#reagendarModal">
+                        <i class="bi bi-calendar2-week"></i> Reagendar
+                    </button>
+                    {% endif %}
+                    
+                    <a href="{{ url_for('criar_horario') }}?cadastro={{ horario.cadastro_id }}" 
+                       class="btn btn-primary">
+                        <i class="bi bi-plus-circle"></i> Novo Agendamento
+                    </a>
+                    
+                    <a href="{{ url_for('visualizar_cadastro', id=horario.cadastro_id) }}" 
+                       class="btn btn-outline-primary">
+                        <i class="bi bi-person-lines-fill"></i> Ver Perfil do Cliente
+                    </a>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Informações do Cliente -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h6 class="mb-0">
+                    <i class="bi bi-person-badge me-2"></i>Informações do Cliente
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="text-center mb-3">
+                    <div class="avatar-lg bg-primary rounded-circle d-inline-flex align-items-center justify-content-center">
+                        <span class="text-white fs-3">{{ horario.cadastro.nome[:1]|upper }}</span>
+                    </div>
+                    <h5 class="mt-3">{{ horario.cadastro.nome }}</h5>
+                    <p class="text-muted">{{ horario.cadastro.email }}</p>
+                </div>
+                
+                <div class="list-group list-group-flush">
+                    {% if horario.cadastro.telefone %}
+                    <div class="list-group-item">
+                        <div class="d-flex justify-content-between">
+                            <span><i class="bi bi-telephone me-2"></i>Telefone</span>
+                            <strong>{{ horario.cadastro.telefone }}</strong>
+                        </div>
+                    </div>
+                    {% endif %}
+                    
+                    {% if horario.cadastro.documento %}
+                    <div class="list-group-item">
+                        <div class="d-flex justify-content-between">
+                            <span><i class="bi bi-card-text me-2"></i>Documento</span>
+                            <strong>{{ horario.cadastro.documento }}</strong>
+                        </div>
+                    </div>
+                    {% endif %}
+                    
+                    <div class="list-group-item">
+                        <div class="d-flex justify-content-between">
+                            <span><i class="bi bi-calendar-week me-2"></i>Total Agendamentos</span>
+                            <span class="badge bg-primary">{{ horario.cadastro.horarios|length }}</span>
+                        </div>
+                    </div>
+                    
+                    <div class="list-group-item">
+                        <div class="d-flex justify-content-between">
+                            <span><i class="bi bi-calendar-check me-2"></i>Último Agendamento</span>
+                            <span>{{ ultimo_agendamento.strftime('%d/%m/%Y') if ultimo_agendamento else 'Nenhum' }}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Próximos Agendamentos do Cliente -->
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0">
+                    <i class="bi bi-calendar2-week me-2"></i>Próximos Agendamentos
+                </h6>
+            </div>
+            <div class="card-body">
+                {% if proximos_agendamentos %}
+                <div class="list-group list-group-flush">
+                    {% for agendamento in proximos_agendamentos %}
+                    <a href="{{ url_for('visualizar_horario', id=agendamento.id) }}" 
+                       class="list-group-item list-group-item-action">
+                        <div class="d-flex w-100 justify-content-between">
+                            <h6 class="mb-1">{{ agendamento.data.strftime('%d/%m') }}</h6>
+                            <small>{{ agendamento.hora_inicio.strftime('%H:%M') }}</small>
+                        </div>
+                        <p class="mb-1 text-muted">
+                            {{ agendamento.descricao[:30] if agendamento.descricao else 'Sem descrição' }}
+                        </p>
+                        <small>
+                            {% if agendamento.status == 'confirmado' %}
+                            <span class="badge bg-success">Confirmado</span>
+                            {% else %}
+                            <span class="badge bg-warning">Pendente</span>
+                            {% endif %}
+                        </small>
+                    </a>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="text-center text-muted py-3">
+                    <i class="bi bi-calendar-x fs-4"></i>
+                    <p class="mt-2">Nenhum outro agendamento</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de Confirmação -->
+<div class="modal fade" id="confirmModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="bi bi-check-circle text-success me-2"></i>Confirmar Agendamento
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Tem certeza que deseja confirmar o agendamento de <strong>{{ horario.cadastro.nome }}</strong> para <strong>{{ horario.data.strftime('%d/%m/%Y') }} às {{ horario.hora_inicio.strftime('%H:%M') }}</strong>?</p>
+                
+                <div class="mb-3">
+                    <label class="form-label">Observações (opcional)</label>
+                    <textarea class="form-control" id="confirmObservacoes" rows="2" 
+                              placeholder="Observações adicionais..."></textarea>
+                </div>
+                
+                <div class="form-check mb-3">
+                    <input class="form-check-input" type="checkbox" id="notificarCliente">
+                    <label class="form-check-label" for="notificarCliente">
+                        Notificar cliente por email
+                    </label>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-success" onclick="confirmarAgendamento()">
+                    <i class="bi bi-check-lg"></i> Confirmar Agendamento
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de Cancelamento -->
+<div class="modal fade" id="cancelModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="bi bi-x-circle text-danger me-2"></i>Cancelar Agendamento
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Tem certeza que deseja cancelar o agendamento de <strong>{{ horario.cadastro.nome }}</strong> para <strong>{{ horario.data.strftime('%d/%m/%Y') }} às {{ horario.hora_inicio.strftime('%H:%M') }}</strong>?</p>
+                
+                <div class="mb-3">
+                    <label class="form-label">Motivo do Cancelamento *</label>
+                    <select class="form-select" id="motivoCancelamento" required>
+                        <option value="">Selecione um motivo...</option>
+                        <option value="cliente">Cancelamento pelo cliente</option>
+                        <option value="profissional">Cancelamento pelo profissional</option>
+                        <option value="indisponibilidade">Indisponibilidade</option>
+                        <option value="outro">Outro motivo</option>
+                    </select>
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label">Observações</label>
+                    <textarea class="form-control" id="cancelObservacoes" rows="3" 
+                              placeholder="Descreva o motivo detalhadamente..." required></textarea>
+                </div>
+                
+                <div class="form-check mb-3">
+                    <input class="form-check-input" type="checkbox" id="notificarCancelamento" checked>
+                    <label class="form-check-label" for="notificarCancelamento">
+                        Notificar cliente por email
+                    </label>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Voltar</button>
+                <button type="button" class="btn btn-danger" onclick="cancelarAgendamento()">
+                    <i class="bi bi-x-lg"></i> Cancelar Agendamento
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de Reagendamento -->
+<div class="modal fade" id="reagendarModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="bi bi-calendar2-week text-primary me-2"></i>Reagendar
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Selecione a nova data e horário para o agendamento de <strong>{{ horario.cadastro.nome }}</strong>.</p>
+                
+                <div class="mb-3">
+                    <label class="form-label">Nova Data *</label>
+                    <input type="date" class="form-control" id="novaDataReagendar" 
+                           value="{{ horario.data.strftime('%Y-%m-%d') }}" 
+                           min="{{ hoje }}">
+                </div>
+                
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label class="form-label">Nova Hora Início *</label>
+                        <input type="time" class="form-control" id="novaHoraInicio" 
+                               value="{{ horario.hora_inicio.strftime('%H:%M') }}">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Nova Hora Fim *</label>
+                        <input type="time" class="form-control" id="novaHoraFim" 
+                               value="{{ horario.hora_fim.strftime('%H:%M') }}">
+                    </div>
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label">Observações</label>
+                    <textarea class="form-control" id="reagendarObservacoes" rows="2" 
+                              placeholder="Motivo do reagendamento..."></textarea>
+                </div>
+                
+                <div class="form-check mb-3">
+                    <input class="form-check-input" type="checkbox" id="notificarReagendamento" checked>
+                    <label class="form-check-label" for="notificarReagendamento">
+                        Notificar cliente por email
+                    </label>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary" onclick="reagendarAgendamento()">
+                    <i class="bi bi-calendar2-check"></i> Reagendar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.info-box {
+    background: var(--light-color);
+    padding: 20px;
+    border-radius: var(--border-radius);
+    border-left: 4px solid var(--primary-color);
+}
+
+.avatar-xl {
+    width: 100px;
+    height: 100px;
+}
+
+.avatar-lg {
+    width: 80px;
+    height: 80px;
+}
+
+.timeline {
+    position: relative;
+    padding-left: 30px;
+}
+.timeline-item {
+    position: relative;
+    margin-bottom: 20px;
+}
+.timeline-marker {
+    position: absolute;
+    left: -30px;
+    top: 0;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    border: 3px solid white;
+}
+.timeline-content {
+    background: var(--light-color);
+    padding: 15px;
+    border-radius: var(--border-radius-sm);
+    border-left: 3px solid var(--primary-color);
+}
+</style>
+
+<script>
+function confirmarAgendamento() {
+    const observacoes = $('#confirmObservacoes').val();
+    const notificar = $('#notificarCliente').is(':checked');
+    
+    // Em produção, fazer chamada AJAX
+    showSuccess('Agendamento confirmado com sucesso!');
+    $('#confirmModal').modal('hide');
+    
+    // Recarregar após 1 segundo
+    setTimeout(() => {
+        window.location.reload();
+    }, 1500);
+}
+
+function cancelarAgendamento() {
+    const motivo = $('#motivoCancelamento').val();
+    const observacoes = $('#cancelObservacoes').val();
+    const notificar = $('#notificarCancelamento').is(':checked');
+    
+    if (!motivo) {
+        showError('Selecione um motivo para o cancelamento');
+        return;
+    }
+    
+    if (!observacoes.trim()) {
+        showError('Descreva o motivo do cancelamento');
+        return;
+    }
+    
+    // Em produção, fazer chamada AJAX
+    showSuccess('Agendamento cancelado com sucesso!');
+    $('#cancelModal').modal('hide');
+    
+    // Recarregar após 1 segundo
+    setTimeout(() => {
+        window.location.reload();
+    }, 1500);
+}
+
+function reagendarAgendamento() {
+    const novaData = $('#novaDataReagendar').val();
+    const novaHoraInicio = $('#novaHoraInicio').val();
+    const novaHoraFim = $('#novaHoraFim').val();
+    const observacoes = $('#reagendarObservacoes').val();
+    const notificar = $('#notificarReagendamento').is(':checked');
+    
+    if (!novaData || !novaHoraInicio || !novaHoraFim) {
+        showError('Preencha todos os campos obrigatórios');
+        return;
+    }
+    
+    // Em produção, fazer chamada AJAX
+    showSuccess('Agendamento reagendado com sucesso!');
+    $('#reagendarModal').modal('hide');
+    
+    // Redirecionar para edição com novos dados
+    setTimeout(() => {
+        window.location.href = '{{ url_for("editar_horario", id=horario.id) }}';
+    }, 1500);
+}
+
+// Contador para observações
+$(document).ready(function() {
+    $('#cancelObservacoes').on('input', function() {
+        const length = $(this).val().length;
+        $('#charCounterCancel').text(`${length}/500 caracteres`);
+    });
+    
+    $('#reagendarObservacoes').on('input', function() {
+        const length = $(this).val().length;
+        $('#charCounterReagendar').text(`${length}/500 caracteres`);
+    });
+    
+    // Atualizar status visual
+    const statusBadge = $('.badge:first');
+    if (statusBadge.text() === 'Confirmado') {
+        statusBadge.addClass('pulse');
+    }
+});
+</script>
+{% endblock %}
