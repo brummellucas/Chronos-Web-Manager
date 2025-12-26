@@ -309,7 +309,9 @@
             });
         }
     </script>
-    
+    <!-- Antes do </body> no base.html -->
+    <script src="{{ url_for('static', filename='js/scripts.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/confirmations.js') }}"></script>
     {% block scripts %}{% endblock %}
 </body>
 </html>

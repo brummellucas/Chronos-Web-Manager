@@ -230,20 +230,27 @@
                         <td class="text-end">
                             <div class="btn-group btn-group-sm">
                                 <a href="{{ url_for('visualizar_horario', id=horario.id) }}" 
-                                   class="btn btn-outline-primary" title="Visualizar">
+                                class="btn btn-outline-primary" title="Visualizar">
                                     <i class="bi bi-eye"></i>
                                 </a>
                                 <a href="{{ url_for('editar_horario', id=horario.id) }}" 
-                                   class="btn btn-outline-success" title="Editar">
+                                class="btn btn-outline-success" title="Editar">
                                     <i class="bi bi-pencil"></i>
                                 </a>
-                                <button type="button" 
-                                        class="btn btn-outline-danger" 
-                                        title="Excluir"
-                                        onclick="confirmarExclusao('{{ url_for('deletar_horario', id=horario.id) }}', 
-                                        'Tem certeza que deseja excluir o horário de {{ horario.cadastro.nome }} em {{ horario.data.strftime("%d/%m/%Y") }}?')">
-                                    <i class="bi bi-trash"></i>
-                                </button>
+                                
+                                <!-- BOTÃO DE EXCLUSÃO HORÁRIO -->
+                                <form action="{{ url_for('deletar_horario', id=horario.id) }}" 
+                                    method="POST" 
+                                    style="display: inline;"
+                                    id="delete-horario-form-{{ horario.id }}">
+                                    
+                                    <button type="button" 
+                                            class="btn btn-outline-danger" 
+                                            title="Excluir"
+                                            onclick="confirmDeleteHorario({{ horario.id }}, '{{ horario.cadastro.nome|replace(\"'\", \"\") }}', '{{ horario.data.strftime("%d/%m/%Y") }}')">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </form>
                             </div>
                         </td>
                     </tr>
@@ -390,5 +397,11 @@ $(document).on('click', '.event-item', function() {
         window.location.href = '/horarios/' + horarioId;
     }
 });
+// Função para confirmar exclusão de horário
+function confirmDeleteHorario(id, nomeCliente, data) {
+    if (confirm(`Tem certeza que deseja excluir o horário de ${nomeCliente} em ${data}?\n\nEsta ação não pode ser desfeita!`)) {
+        document.getElementById('delete-horario-form-' + id).submit();
+    }
+}
 </script>
 {% endblock %}

@@ -278,13 +278,20 @@ def create_app():
     @app.route('/cadastros/<int:id>/deletar', methods=['POST'])
     def deletar_cadastro(id):
         try:
-            with app.app_context():
-                cadastro = Cadastro.query.get_or_404(id)
-                db.session.delete(cadastro)
-                db.session.commit()
-                
-                flash('Cadastro deletado com sucesso!', 'success')
+            # Não precisa de with app.app_context() aqui, a rota já roda no contexto
+            cadastro = Cadastro.query.get_or_404(id)
+            
+            # Verificar se tem horários agendados
+            if cadastro.horarios:
+                flash('Não é possível excluir um cadastro com horários agendados!', 'error')
+                return redirect(url_for('listar_cadastros'))
+            
+            db.session.delete(cadastro)
+            db.session.commit()
+            
+            flash('Cadastro deletado com sucesso!', 'success')
         except Exception as e:
+            db.session.rollback() # Boa prática: desfazer em caso de erro
             flash(f'Erro ao deletar cadastro: {str(e)}', 'error')
         
         return redirect(url_for('listar_cadastros'))
