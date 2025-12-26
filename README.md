@@ -11,7 +11,32 @@
 **Sistema web completo para gestão de agendamentos com arquitetura MVC e interface moderna**
 
 </div>
+---
+## 📸 Demonstração do Sistema
 
+<div align="center">
+  <h3>🎥 Interface do Sistema Chronos Web Manager</h3>
+
+  <p><strong>Dashboard Principal</strong></p>
+  <img src="static/Dashboard.png" alt="Dashboard Principal" width="800">
+  <p><em>Dashboard interativo com estatísticas, calendário e agenda do dia</em></p>
+
+  <p><strong>Gerenciamento de Cadastros</strong></p>
+  <img src="static/gerenciar%20cadastros.png" alt="Gerenciar Cadastros" width="800">
+  <p><em>Interface de gestão de clientes com busca, filtros e ações rápidas</em></p>
+
+  <p><strong>Novo Cadastro</strong></p>
+  <img src="static/novo_cadastro.png" alt="Novo Cadastro" width="800">
+  <p><em>Formulário de cadastro de clientes com validações em tempo real</em></p>
+
+  <p><strong>Agendar Novo Horário</strong></p>
+  <img src="static/agendar_novo_horario.png" alt="Agendar Horário" width="800">
+  <p><em>Sistema inteligente de agendamento com verificação de disponibilidade</em></p>
+
+  <p><strong>Detalhes do Agendamento</strong></p>
+  <img src="static/detalhes_agendamento.png" alt="Detalhes" width="800">
+  <p><em>Visualização completa de agendamento com histórico e ações</em></p>
+</div>
 ---
 
 ## 📋 **Índice**
