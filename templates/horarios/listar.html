@@ -247,7 +247,7 @@
                                     <button type="button" 
                                             class="btn btn-outline-danger" 
                                             title="Excluir"
-                                            onclick="confirmDeleteHorario({{ horario.id }}, '{{ horario.cadastro.nome|replace(\"'\", \"\") }}', '{{ horario.data.strftime("%d/%m/%Y") }}')">
+                                          onclick="confirmDeleteHorario({{ horario.id }}, '{{ horario.cadastro.nome }}', '{{ horario.data.strftime('%d/%m/%Y') }}')">
                                         <i class="bi bi-trash"></i>
                                     </button>
                                 </form>
