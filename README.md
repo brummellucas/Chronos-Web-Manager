@@ -112,7 +112,7 @@
 
 ```bash
 # 1. Clone o repositório
-git clone https://github.com/seu-usuario/chronos-web-manager.git
+git clone https://github.com/brummellucas/Chronos-Web-Manager.git
 cd chronos-web-manager
 
 # 2. Crie um ambiente virtual
