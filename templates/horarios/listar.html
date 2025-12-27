@@ -175,8 +175,8 @@
                     <tr class="{% if horario.data < hoje %}table-secondary{% endif %}">
                         <td>{{ horario.id }}</td>
                         <td>
-                            <strong>{{ horario.data.strftime('%d/%m/%Y') }}</strong><br>
-                            <small class="text-muted">{{ horario.hora_inicio.strftime('%H:%M') }} - {{ horario.hora_fim.strftime('%H:%M') }}</small>
+                            <strong>{{ horario.data_formatada }}</strong><br>
+                            <small class="text-muted">{{ horario.hora_inicio_str }} - {{ horario.hora_fim_str }}</small>
                         </td>
                         <td>
                             <div class="d-flex align-items-center">
@@ -199,8 +199,8 @@
                         </td>
                         <td>
                             {% if horario.descricao %}
-                            <span title="{{ horario.descricao }}">
-                                {{ horario.descricao[:30] }}
+                            <span title="{{ horario.descricao_limpa }}">
+                                {{ horario.descricao_limpa }}
                                 {% if horario.descricao|length > 30 %}...{% endif %}
                             </span>
                             {% else %}
@@ -247,7 +247,7 @@
                                     <button type="button" 
                                             class="btn btn-outline-danger" 
                                             title="Excluir"
-                                          onclick="confirmDeleteHorario({{ horario.id }}, '{{ horario.cadastro.nome }}', '{{ horario.data.strftime('%d/%m/%Y') }}')">
+                                          onclick="confirmDeleteHorario({{ horario.id }}, '{{ horario.nome_cliente_limpo }}', '{{ horario.data_formatada }}')">
                                         <i class="bi bi-trash"></i>
                                     </button>
                                 </form>
