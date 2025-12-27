@@ -1,37 +1,7 @@
-# app.py - VERSÃO COMPLETA E FUNCIONAL
 from flask import Flask, render_template, request, jsonify, redirect, url_for, flash
 from config import Config
 from datetime import datetime, date, timedelta
-import random
 
-def create_app():
-    app = Flask(__name__)
-    app.config.from_object(Config)
-    
-    # Importar db dos models
-    from models import db
-    db.init_app(app)
-    
-    # Importar modelos
-    from models import Cadastro, Horario
-    
-    # FORÇAR RECRIAÇÃO DO BANCO SE HOUVER ERROS
-    with app.app_context():
-        try:
-            # Tentar contar horários para ver se o banco está OK
-            Horario.query.count()
-        except Exception as e:
-            if 'no such column' in str(e):
-                print("⚠️  Banco de dados desatualizado. Recriando...")
-                db.drop_all()  # Excluir tabelas antigas
-                db.create_all()  # Criar tabelas novas
-                print("✅ Banco de dados recriado com sucesso!")
-            else:
-                raise e
-        else:
-            # Se não houver erro, criar tabelas normalmente (se não existirem)
-            db.create_all()
-            
 def create_app():
     app = Flask(__name__)
     app.config.from_object(Config)
@@ -161,6 +131,13 @@ def create_app():
             
             total = len(cadastros)
             
+            # Criar versão "limpa" dos nomes sem aspas simples
+            for cadastro in cadastros:
+                # Remove aspas simples e duplas para segurança no JavaScript
+                cadastro.nome_limpo = cadastro.nome.replace("'", "").replace('"', '')
+                # Opcional: também limpar o email se for usar em JavaScript
+                cadastro.email_limpo = cadastro.email.replace("'", "").replace('"', '') if cadastro.email else ''
+            
             return render_template('cadastros/listar.html', 
                                  cadastros=cadastros, 
                                  total=total,
@@ -277,17 +254,40 @@ def create_app():
     
     @app.route('/cadastros/<int:id>/deletar', methods=['POST'])
     def deletar_cadastro(id):
+        print(f"🔍 DEBUG: Iniciando exclusão do cadastro ID: {id}")
         try:
             with app.app_context():
+                # Buscar o cadastro
                 cadastro = Cadastro.query.get_or_404(id)
+                
+                print(f"📋 DEBUG: Cadastro encontrado - {cadastro.nome}")
+                print(f"📋 DEBUG: Horários associados: {len(cadastro.horarios)}")
+                
+                # 🔍 Opcional: Verificar se tem horários futuros
+                hoje = date.today()
+                
+                horarios_futuros = Horario.query.filter(
+                    Horario.cadastro_id == id,
+                    Horario.data >= hoje
+                ).all()
+                
+                if horarios_futuros:
+                    flash(f'⚠️ Não é possível excluir! Existem {len(horarios_futuros)} horário(s) futuro(s) agendado(s).', 'warning')
+                    return redirect(url_for('visualizar_cadastro', id=id))
+                
+                # 🔧 Excluir o cadastro (os horários serão excluídos em cascata)
                 db.session.delete(cadastro)
                 db.session.commit()
                 
-                flash('Cadastro deletado com sucesso!', 'success')
+                print(f"✅ DEBUG: Cadastro {id} excluído com sucesso!")
+                flash('✅ Cadastro excluído com sucesso!', 'success')
+                return redirect(url_for('listar_cadastros'))
+                
         except Exception as e:
-            flash(f'Erro ao deletar cadastro: {str(e)}', 'error')
-        
-        return redirect(url_for('listar_cadastros'))
+            db.session.rollback()
+            print(f"❌ DEBUG: Erro ao excluir: {str(e)}")
+            flash(f'❌ Erro ao excluir cadastro: {str(e)}', 'danger')
+            return redirect(url_for('listar_cadastros'))
     
     @app.route('/horarios')
     def listar_horarios():
@@ -318,6 +318,21 @@ def create_app():
             hoje = date.today()
             hoje_count = Horario.query.filter_by(data=hoje).count()
             
+            # Preparar dados para o template
+            for horario in horarios:
+                # Nome limpo do cliente (sem aspas)
+                horario.nome_cliente_limpo = horario.cadastro.nome.replace("'", "").replace('"', '')
+                # Data formatada
+                horario.data_formatada = horario.data.strftime('%d/%m/%Y')
+                # Horários formatados
+                horario.hora_inicio_str = horario.hora_inicio.strftime('%H:%M')
+                horario.hora_fim_str = horario.hora_fim.strftime('%H:%M')
+                # Descrição limpa (se existir)
+                if horario.descricao:
+                    horario.descricao_limpa = horario.descricao.replace("'", "").replace('"', '')[:30]
+                else:
+                    horario.descricao_limpa = ''
+            
             # Semana atual para visualização
             inicio_semana = hoje - timedelta(days=hoje.weekday())
             dias_semana = []
@@ -327,7 +342,7 @@ def create_app():
                 dias_semana.append({
                     'data': dia_data,
                     'eventos': [{
-                        'hora': f"{h.hora_inicio.strftime('%H:%M')}-{h.hora_fim.strftime('%H:%M')}",
+                        'hora': f"{h.hora_inicio_str}-{h.hora_fim_str}",
                         'cliente': h.cadastro.nome[:10] + '...' if len(h.cadastro.nome) > 10 else h.cadastro.nome,
                         'cor': '#4361ee',
                         'id': h.id

@@ -1,3 +1,40 @@
+// ===== FUNÇÕES GLOBAIS =====
+
+// Função para confirmar e executar exclusão
+function confirmarExclusao(id, nome) {
+    Swal.fire({
+        title: 'Confirmar Exclusão',
+        text: 'Tem certeza que deseja excluir o cadastro de ' + nome + '?',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d33',
+        cancelButtonColor: '#3085d6',
+        confirmButtonText: 'Sim, excluir!',
+        cancelButtonText: 'Cancelar',
+        reverseButtons: true
+    }).then((result) => {
+        if (result.isConfirmed) {
+            // Enviar o formulário de exclusão
+            document.getElementById('form-delete-' + id).submit();
+        }
+    });
+}
+
+$(document).ready(function() {
+    $('#searchButton').click(function() {
+        const searchTerm = $('#searchInput').val();
+        if (searchTerm) {
+            window.location.href = "{{ url_for('listar_cadastros') }}?filtro=" + encodeURIComponent(searchTerm);
+        }
+    });
+    
+    $('#searchInput').keypress(function(e) {
+        if (e.which === 13) {
+            $('#searchButton').click();
+        }
+    });
+});
+
 // ===== SISTEMA DE AGENDAMENTO - SCRIPT PRINCIPAL =====
 
 // Document Ready

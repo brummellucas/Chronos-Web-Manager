@@ -101,20 +101,26 @@
                         <td class="text-end">
                             <div class="btn-group">
                                 <a href="{{ url_for('visualizar_cadastro', id=cadastro.id) }}" 
-                                   class="btn btn-sm btn-outline-primary" title="Visualizar">
+                                class="btn btn-sm btn-outline-primary" title="Visualizar">
                                     <i class="bi bi-eye"></i>
                                 </a>
                                 <a href="{{ url_for('editar_cadastro', id=cadastro.id) }}" 
-                                   class="btn btn-sm btn-outline-success" title="Editar">
+                                class="btn btn-sm btn-outline-success" title="Editar">
                                     <i class="bi bi-pencil"></i>
                                 </a>
-                                <button type="button" 
-                                        class="btn btn-sm btn-outline-danger" 
-                                        title="Excluir"
-                                        onclick="confirmarExclusao('{{ url_for('deletar_cadastro', id=cadastro.id) }}', 
-                                        'Tem certeza que deseja excluir o cadastro de {{ cadastro.nome }}?')">
-                                    <i class="bi bi-trash"></i>
-                                </button>
+                                
+                                <!-- BOTÃO DE EXCLUSÃO COM JAVASCRIPT PURO -->
+                                <form action="{{ url_for('deletar_cadastro', id=cadastro.id) }}" 
+                                    method="POST" 
+                                    style="display: inline;">
+                                    
+                                    <button type="submit" 
+                                            class="btn btn-sm btn-outline-danger" 
+                                            title="Excluir"
+                                            onclick="return confirm('Deseja excluir {{ cadastro.nome_limpo }}?')">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </form>
                             </div>
                         </td>
                     </tr>
@@ -136,19 +142,27 @@
 </div>
 
 <script>
-    $(document).ready(function() {
-        $('#searchButton').click(function() {
-            const searchTerm = $('#searchInput').val();
-            if (searchTerm) {
-                window.location.href = "{{ url_for('listar_cadastros') }}?filtro=" + encodeURIComponent(searchTerm);
-            }
-        });
-        
-        $('#searchInput').keypress(function(e) {
-            if (e.which === 13) {
-                $('#searchButton').click();
-            }
-        });
+// Função para confirmar exclusão
+function confirmDelete(id, nome) {
+    if (confirm(`Deseja excluir o cadastro de "${nome}"?`)) {
+        // ⚠️ IMPORTANTE: Submeter o FORMULÁRIO, não fazer DELETE direto
+        document.getElementById('delete-form-' + id).submit();
+    }
+}
+
+$(document).ready(function() {
+    $('#searchButton').click(function() {
+        const searchTerm = $('#searchInput').val();
+        if (searchTerm) {
+            window.location.href = "{{ url_for('listar_cadastros') }}?filtro=" + encodeURIComponent(searchTerm);
+        }
     });
+    
+    $('#searchInput').keypress(function(e) {
+        if (e.which === 13) {
+            $('#searchButton').click();
+        }
+    });
+});
 </script>
 {% endblock %}

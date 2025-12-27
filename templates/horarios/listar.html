@@ -175,8 +175,8 @@
                     <tr class="{% if horario.data < hoje %}table-secondary{% endif %}">
                         <td>{{ horario.id }}</td>
                         <td>
-                            <strong>{{ horario.data.strftime('%d/%m/%Y') }}</strong><br>
-                            <small class="text-muted">{{ horario.hora_inicio.strftime('%H:%M') }} - {{ horario.hora_fim.strftime('%H:%M') }}</small>
+                            <strong>{{ horario.data_formatada }}</strong><br>
+                            <small class="text-muted">{{ horario.hora_inicio_str }} - {{ horario.hora_fim_str }}</small>
                         </td>
                         <td>
                             <div class="d-flex align-items-center">
@@ -199,8 +199,8 @@
                         </td>
                         <td>
                             {% if horario.descricao %}
-                            <span title="{{ horario.descricao }}">
-                                {{ horario.descricao[:30] }}
+                            <span title="{{ horario.descricao_limpa }}">
+                                {{ horario.descricao_limpa }}
                                 {% if horario.descricao|length > 30 %}...{% endif %}
                             </span>
                             {% else %}
@@ -230,20 +230,27 @@
                         <td class="text-end">
                             <div class="btn-group btn-group-sm">
                                 <a href="{{ url_for('visualizar_horario', id=horario.id) }}" 
-                                   class="btn btn-outline-primary" title="Visualizar">
+                                class="btn btn-outline-primary" title="Visualizar">
                                     <i class="bi bi-eye"></i>
                                 </a>
                                 <a href="{{ url_for('editar_horario', id=horario.id) }}" 
-                                   class="btn btn-outline-success" title="Editar">
+                                class="btn btn-outline-success" title="Editar">
                                     <i class="bi bi-pencil"></i>
                                 </a>
-                                <button type="button" 
-                                        class="btn btn-outline-danger" 
-                                        title="Excluir"
-                                        onclick="confirmarExclusao('{{ url_for('deletar_horario', id=horario.id) }}', 
-                                        'Tem certeza que deseja excluir o horário de {{ horario.cadastro.nome }} em {{ horario.data.strftime("%d/%m/%Y") }}?')">
-                                    <i class="bi bi-trash"></i>
-                                </button>
+                                
+                                <!-- BOTÃO DE EXCLUSÃO HORÁRIO -->
+                                <form action="{{ url_for('deletar_horario', id=horario.id) }}" 
+                                    method="POST" 
+                                    style="display: inline;"
+                                    id="delete-horario-form-{{ horario.id }}">
+                                    
+                                    <button type="button" 
+                                            class="btn btn-outline-danger" 
+                                            title="Excluir"
+                                          onclick="confirmDeleteHorario({{ horario.id }}, '{{ horario.nome_cliente_limpo }}', '{{ horario.data_formatada }}')">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </form>
                             </div>
                         </td>
                     </tr>
@@ -390,5 +397,11 @@ $(document).on('click', '.event-item', function() {
         window.location.href = '/horarios/' + horarioId;
     }
 });
+// Função para confirmar exclusão de horário
+function confirmDeleteHorario(id, nomeCliente, data) {
+    if (confirm(`Tem certeza que deseja excluir o horário de ${nomeCliente} em ${data}?\n\nEsta ação não pode ser desfeita!`)) {
+        document.getElementById('delete-horario-form-' + id).submit();
+    }
+}
 </script>
 {% endblock %}
