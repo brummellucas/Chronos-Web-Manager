@@ -8,12 +8,18 @@
     <a href="{{ url_for('criar_cadastro') }}" class="btn btn-primary">
         <i class="bi bi-person-plus"></i> Novo Cadastro
     </a>
+    
+    <!-- ✅ BOTÃO EXPORTAR CSV -->
+    <a href="{{ url_for('exportar_cadastros_csv') }}" class="btn btn-success">
+        <i class="bi bi-file-earmark-excel"></i> Exportar CSV
+    </a>
+    
     <button type="button" class="btn btn-primary dropdown-toggle dropdown-toggle-split" 
             data-bs-toggle="dropdown">
         <span class="visually-hidden">Menu</span>
     </button>
     <ul class="dropdown-menu">
-        <li><a class="dropdown-item" href="#">
+        <li><a class="dropdown-item" href="{{ url_for('exportar_cadastros_csv') }}">
             <i class="bi bi-download"></i> Exportar CSV
         </a></li>
         <li><a class="dropdown-item" href="#">

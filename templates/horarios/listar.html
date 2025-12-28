@@ -8,6 +8,12 @@
     <a href="{{ url_for('criar_horario') }}" class="btn btn-primary">
         <i class="bi bi-plus-circle"></i> Novo Horário
     </a>
+    
+    <!-- ✅ BOTÃO EXPORTAR CSV -->
+    <a href="{{ url_for('exportar_horarios_csv') }}" class="btn btn-success">
+        <i class="bi bi-file-earmark-excel"></i> Exportar CSV
+    </a>
+    
     <button type="button" class="btn btn-primary dropdown-toggle dropdown-toggle-split" 
             data-bs-toggle="dropdown">
         <span class="visually-hidden">Menu</span>
@@ -16,15 +22,12 @@
         <li><a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#filterModal">
             <i class="bi bi-funnel"></i> Filtros Avançados
         </a></li>
-        <li><a class="dropdown-item" href="#">
-            <i class="bi bi-calendar-week"></i> Agenda Semanal
-        </a></li>
-        <li><a class="dropdown-item" href="#">
-            <i class="bi bi-download"></i> Exportar Agenda
+        <li><a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#relatorioModal">
+            <i class="bi bi-graph-up"></i> Relatório CSV
         </a></li>
         <li><hr class="dropdown-divider"></li>
-        <li><a class="dropdown-item" href="#">
-            <i class="bi bi-printer"></i> Imprimir Agenda
+        <li><a class="dropdown-item" href="{{ url_for('exportar_horarios_csv') }}">
+            <i class="bi bi-download"></i> Exportar Todos
         </a></li>
     </ul>
 </div>
@@ -335,6 +338,42 @@
     </div>
 </div>
 
+<!-- Modal para Relatório CSV -->
+<div class="modal fade" id="relatorioModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="bi bi-graph-up me-2"></i>Gerar Relatório CSV
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form action="{{ url_for('exportar_relatorio_csv') }}" method="GET">
+                    <div class="mb-3">
+                        <label class="form-label">Data Início</label>
+                        <input type="date" class="form-control" name="data_inicio" required 
+                                value="{{ hoje_str }}">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Data Fim</label>
+                        <input type="date" class="form-control" name="data_fim" required 
+                                value="{{ data_fim_padrao }}">
+                    </div>
+                    <div class="mt-3">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-download"></i> Gerar Relatório
+                        </button>
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                            Cancelar
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
 <style>
 .day-header {
     border-bottom: 1px solid #dee2e6;
@@ -397,6 +436,7 @@ $(document).on('click', '.event-item', function() {
         window.location.href = '/horarios/' + horarioId;
     }
 });
+
 // Função para confirmar exclusão de horário
 function confirmDeleteHorario(id, nomeCliente, data) {
     if (confirm(`Tem certeza que deseja excluir o horário de ${nomeCliente} em ${data}?\n\nEsta ação não pode ser desfeita!`)) {

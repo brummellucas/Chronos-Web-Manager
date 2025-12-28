@@ -1,6 +1,9 @@
-from flask import Flask, render_template, request, jsonify, redirect, url_for, flash
+# app.py - VERSÃO COMPLETA COM EXPORTAÇÃO CSV
+from flask import Flask, render_template, request, jsonify, redirect, url_for, flash, make_response
 from config import Config
 from datetime import datetime, date, timedelta
+import csv
+import io
 
 def create_app():
     app = Flask(__name__)
@@ -294,73 +297,79 @@ def create_app():
         with app.app_context():
             filtro_data = request.args.get('data', '')
             filtro_cadastro = request.args.get('cadastro', '')
-            
-            query = Horario.query
-            
-            if filtro_data:
-                try:
-                    data_filtro = datetime.strptime(filtro_data, '%Y-%m-%d').date()
-                    query = query.filter_by(data=data_filtro)
-                except ValueError:
-                    pass
-            
-            if filtro_cadastro:
-                try:
-                    cadastro_id = int(filtro_cadastro)
-                    query = query.filter_by(cadastro_id=cadastro_id)
-                except ValueError:
-                    pass
-            
-            horarios = query.order_by(Horario.data, Horario.hora_inicio).all()
-            total = len(horarios)
-            cadastros = Cadastro.query.order_by(Cadastro.nome).all()
-            
-            hoje = date.today()
-            hoje_count = Horario.query.filter_by(data=hoje).count()
-            
-            # Preparar dados para o template
-            for horario in horarios:
-                # Nome limpo do cliente (sem aspas)
-                horario.nome_cliente_limpo = horario.cadastro.nome.replace("'", "").replace('"', '')
-                # Data formatada
-                horario.data_formatada = horario.data.strftime('%d/%m/%Y')
-                # Horários formatados
-                horario.hora_inicio_str = horario.hora_inicio.strftime('%H:%M')
-                horario.hora_fim_str = horario.hora_fim.strftime('%H:%M')
-                # Descrição limpa (se existir)
-                if horario.descricao:
-                    horario.descricao_limpa = horario.descricao.replace("'", "").replace('"', '')[:30]
-                else:
-                    horario.descricao_limpa = ''
-            
-            # Semana atual para visualização
-            inicio_semana = hoje - timedelta(days=hoje.weekday())
-            dias_semana = []
-            for i in range(7):
-                dia_data = inicio_semana + timedelta(days=i)
-                eventos_dia = [h for h in horarios if h.data == dia_data]
-                dias_semana.append({
-                    'data': dia_data,
-                    'eventos': [{
-                        'hora': f"{h.hora_inicio_str}-{h.hora_fim_str}",
-                        'cliente': h.cadastro.nome[:10] + '...' if len(h.cadastro.nome) > 10 else h.cadastro.nome,
-                        'cor': '#4361ee',
-                        'id': h.id
-                    } for h in eventos_dia[:2]]
-                })
-            
-            semana_atual = f"{inicio_semana.strftime('%d/%m')} - {(inicio_semana + timedelta(days=6)).strftime('%d/%m')}"
-            
-            return render_template('horarios/listar.html',
-                                 horarios=horarios,
-                                 total=total,
-                                 cadastros=cadastros,
-                                 filtro_data=filtro_data,
-                                 filtro_cadastro=filtro_cadastro,
-                                 hoje=hoje,
-                                 hoje_count=hoje_count,
-                                 semana_atual=semana_atual,
-                                 semana=dias_semana)
+        
+        query = Horario.query
+        
+        if filtro_data:
+            try:
+                data_filtro = datetime.strptime(filtro_data, '%Y-%m-%d').date()
+                query = query.filter_by(data=data_filtro)
+            except ValueError:
+                pass
+        
+        if filtro_cadastro:
+            try:
+                cadastro_id = int(filtro_cadastro)
+                query = query.filter_by(cadastro_id=cadastro_id)
+            except ValueError:
+                pass
+        
+        horarios = query.order_by(Horario.data, Horario.hora_inicio).all()
+        total = len(horarios)
+        cadastros = Cadastro.query.order_by(Cadastro.nome).all()
+        
+        hoje = date.today()
+        hoje_count = Horario.query.filter_by(data=hoje).count()
+        
+        # 🔧 CALCULAR DATAS PARA O MODAL
+        data_fim_padrao = (hoje + timedelta(days=30)).strftime('%Y-%m-%d')
+        hoje_str = hoje.strftime('%Y-%m-%d')
+        
+        # Preparar dados para o template
+        for horario in horarios:
+            # Nome limpo do cliente (sem aspas)
+            horario.nome_cliente_limpo = horario.cadastro.nome.replace("'", "").replace('"', '')
+            # Data formatada
+            horario.data_formatada = horario.data.strftime('%d/%m/%Y')
+            # Horários formatados
+            horario.hora_inicio_str = horario.hora_inicio.strftime('%H:%M')
+            horario.hora_fim_str = horario.hora_fim.strftime('%H:%M')
+            # Descrição limpa (se existir)
+            if horario.descricao:
+                horario.descricao_limpa = horario.descricao.replace("'", "").replace('"', '')[:30]
+            else:
+                horario.descricao_limpa = ''
+        
+        # Semana atual para visualização
+        inicio_semana = hoje - timedelta(days=hoje.weekday())
+        dias_semana = []
+        for i in range(7):
+            dia_data = inicio_semana + timedelta(days=i)
+            eventos_dia = [h for h in horarios if h.data == dia_data]
+            dias_semana.append({
+                'data': dia_data,
+                'eventos': [{
+                    'hora': f"{h.hora_inicio_str}-{h.hora_fim_str}",
+                    'cliente': h.cadastro.nome[:10] + '...' if len(h.cadastro.nome) > 10 else h.cadastro.nome,
+                    'cor': '#4361ee',
+                    'id': h.id
+                } for h in eventos_dia[:2]]
+            })
+        
+        semana_atual = f"{inicio_semana.strftime('%d/%m')} - {(inicio_semana + timedelta(days=6)).strftime('%d/%m')}"
+        
+        return render_template('horarios/listar.html',
+                             horarios=horarios,
+                             total=total,
+                             cadastros=cadastros,
+                             filtro_data=filtro_data,
+                             filtro_cadastro=filtro_cadastro,
+                             hoje=hoje,
+                             hoje_str=hoje_str,           # ← NOVO
+                             data_fim_padrao=data_fim_padrao, # ← NOVO
+                             hoje_count=hoje_count,
+                             semana_atual=semana_atual,
+                             semana=dias_semana,  timedelta=timedelta)
     
     @app.route('/horarios/novo', methods=['GET', 'POST'])
     def criar_horario():
@@ -586,6 +595,146 @@ def create_app():
             flash(f'Erro ao deletar horário: {str(e)}', 'error')
         
         return redirect(url_for('listar_horarios'))
+    
+    # ========== EXPORTAÇÃO CSV ==========
+    
+    @app.route('/exportar/cadastros/csv')
+    def exportar_cadastros_csv():
+        """Exporta todos os cadastros para CSV"""
+        with app.app_context():
+            # Criar CSV em memória
+            output = io.StringIO()
+            writer = csv.writer(output)
+            
+            # Cabeçalho
+            writer.writerow(['ID', 'Nome', 'Email', 'Telefone', 'Documento', 'Data Cadastro'])
+            
+            # Dados
+            cadastros = Cadastro.query.order_by(Cadastro.nome).all()
+            for cad in cadastros:
+                writer.writerow([
+                    cad.id,
+                    cad.nome,
+                    cad.email,
+                    cad.telefone or '',
+                    cad.documento or '',
+                    cad.data_criacao.strftime('%d/%m/%Y %H:%M')
+                ])
+            
+            # Configurar resposta
+            output.seek(0)
+            response = make_response(output.getvalue())
+            response.headers['Content-Disposition'] = 'attachment; filename=cadastros.csv'
+            response.headers['Content-type'] = 'text/csv'
+            
+            return response
+    
+    @app.route('/exportar/horarios/csv')
+    def exportar_horarios_csv():
+        """Exporta todos os horários para CSV"""
+        with app.app_context():
+            output = io.StringIO()
+            writer = csv.writer(output)
+            
+            writer.writerow(['ID', 'Cliente', 'Email Cliente', 'Data', 'Hora Início', 'Hora Fim', 'Duração', 'Serviço', 'Status', 'Prioridade'])
+            
+            horarios = Horario.query.order_by(Horario.data, Horario.hora_inicio).all()
+            for hor in horarios:
+                # Calcular duração
+                inicio = hor.hora_inicio
+                fim = hor.hora_fim
+                duracao_min = (fim.hour * 60 + fim.minute) - (inicio.hour * 60 + inicio.minute)
+                horas = duracao_min // 60
+                minutos = duracao_min % 60
+                duracao = f"{horas}h{minutos}min" if horas > 0 else f"{minutos}min"
+                
+                writer.writerow([
+                    hor.id,
+                    hor.cadastro.nome,
+                    hor.cadastro.email,
+                    hor.data.strftime('%d/%m/%Y'),
+                    hor.hora_inicio.strftime('%H:%M'),
+                    hor.hora_fim.strftime('%H:%M'),
+                    duracao,
+                    hor.descricao or '',
+                    hor.status,
+                    hor.prioridade or 'normal'
+                ])
+            
+            output.seek(0)
+            response = make_response(output.getvalue())
+            response.headers['Content-Disposition'] = 'attachment; filename=horarios.csv'
+            response.headers['Content-type'] = 'text/csv'
+            
+            return response
+    
+    @app.route('/exportar/relatorio/csv')
+    def exportar_relatorio_csv():
+        """Exporta relatório com filtros de data"""
+        try:
+            data_inicio = request.args.get('data_inicio', '')
+            data_fim = request.args.get('data_fim', '')
+            
+            if not data_inicio or not data_fim:
+                flash('Datas de início e fim são obrigatórias para o relatório!', 'error')
+                return redirect(url_for('listar_horarios'))
+            
+            inicio = datetime.strptime(data_inicio, '%Y-%m-%d').date()
+            fim = datetime.strptime(data_fim, '%Y-%m-%d').date()
+            
+            with app.app_context():
+                horarios = Horario.query.filter(
+                    Horario.data >= inicio,
+                    Horario.data <= fim
+                ).order_by(Horario.data, Horario.hora_inicio).all()
+                
+                output = io.StringIO()
+                writer = csv.writer(output)
+                
+                writer.writerow(['RELATÓRIO DE AGENDAMENTOS', f'Período: {data_inicio} até {data_fim}'])
+                writer.writerow([])  # Linha vazia
+                writer.writerow(['ID', 'Cliente', 'Data', 'Hora Início', 'Hora Fim', 'Serviço', 'Status', 'Prioridade'])
+                
+                for hor in horarios:
+                    writer.writerow([
+                        hor.id,
+                        hor.cadastro.nome,
+                        hor.data.strftime('%d/%m/%Y'),
+                        hor.hora_inicio.strftime('%H:%M'),
+                        hor.hora_fim.strftime('%H:%M'),
+                        hor.descricao or '',
+                        hor.status,
+                        hor.prioridade or 'normal'
+                    ])
+                
+                # Estatísticas
+                total = len(horarios)
+                writer.writerow([])
+                writer.writerow(['ESTATÍSTICAS DO PERÍODO'])
+                writer.writerow([f'Total de agendamentos: {total}'])
+                
+                # Contar por status
+                status_count = {}
+                for h in horarios:
+                    status_count[h.status] = status_count.get(h.status, 0) + 1
+                
+                for status, count in status_count.items():
+                    writer.writerow([f'{status}: {count}'])
+                
+                output.seek(0)
+                response = make_response(output.getvalue())
+                filename = f'relatorio_{data_inicio}_{data_fim}.csv'
+                response.headers['Content-Disposition'] = f'attachment; filename={filename}'
+                response.headers['Content-type'] = 'text/csv'
+                
+                return response
+                
+        except ValueError:
+            flash('Formato de data inválido. Use YYYY-MM-DD', 'error')
+            return redirect(url_for('listar_horarios'))
+        except Exception as e:
+            flash(f'Erro ao gerar relatório: {str(e)}', 'error')
+            return redirect(url_for('listar_horarios'))
     
     # API para relatórios
     @app.route('/api/relatorio')
