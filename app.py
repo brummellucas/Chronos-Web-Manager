@@ -482,72 +482,96 @@ def create_app():
     
     @app.route('/horarios/<int:id>/editar', methods=['GET', 'POST'])
     def editar_horario(id):
-        with app.app_context():
-            horario = Horario.query.get_or_404(id)
-            cadastros = Cadastro.query.order_by(Cadastro.nome).all()
-            
-            if request.method == 'POST':
-                try:
-                    # Atualizar campos apenas se fornecidos
-                    if 'cadastro_id' in request.form and request.form['cadastro_id']:
-                        horario.cadastro_id = int(request.form['cadastro_id'])
-                    
-                    if 'data' in request.form and request.form['data']:
-                        nova_data = datetime.strptime(request.form['data'], '%Y-%m-%d').date()
-                        if nova_data < date.today():
-                            flash('Não é possível agendar para datas passadas!', 'error')
-                            return render_template('horarios/editar.html', horario=horario, cadastros=cadastros, form_data=request.form)
-                        horario.data = nova_data
-                    
-                    if 'hora_inicio' in request.form and request.form['hora_inicio']:
-                        horario.hora_inicio = datetime.strptime(request.form['hora_inicio'], '%H:%M').time()
-                    
-                    if 'hora_fim' in request.form and request.form['hora_fim']:
-                        horario.hora_fim = datetime.strptime(request.form['hora_fim'], '%H:%M').time()
-                    
-                    # Validar horários
-                    if horario.hora_fim <= horario.hora_inicio:
-                        flash('A hora de término deve ser posterior à hora de início!', 'error')
-                        return render_template('horarios/editar.html', horario=horario, cadastros=cadastros, form_data=request.form)
-                    
-                    # Verificar conflitos (exceto o próprio horário)
-                    conflito = Horario.query.filter(
-                        Horario.data == horario.data,
-                        Horario.id != id,
-                        Horario.cadastro_id == horario.cadastro_id,
-                        ((Horario.hora_inicio < horario.hora_fim) & (Horario.hora_fim > horario.hora_inicio))
-                    ).first()
-                    
-                    if conflito:
-                        flash('Já existe outro horário agendado para este período!', 'error')
-                        return render_template('horarios/editar.html', horario=horario, cadastros=cadastros, form_data=request.form)
-                    
-                    # Atualizar outros campos
-                    if 'descricao' in request.form:
-                        horario.descricao = request.form['descricao']
-                    
-                    if 'status' in request.form:
-                        horario.status = request.form['status']
-                    
-                    if 'tipo_servico' in request.form:
-                        horario.tipo_servico = request.form['tipo_servico']
-                    
-                    if 'prioridade' in request.form:
-                        horario.prioridade = request.form['prioridade']
-                    
-                    db.session.commit()
-                    
-                    flash('Horário atualizado com sucesso!', 'success')
-                    return redirect(url_for('visualizar_horario', id=id))
-                    
-                except ValueError as e:
-                    flash('Formato de data ou hora inválido!', 'error')
-                except Exception as e:
-                    flash(f'Erro ao atualizar horário: {str(e)}', 'error')
+        
+        horario = Horario.query.get_or_404(id)
+        cadastros = Cadastro.query.order_by(Cadastro.nome).all()
+        
+        if request.method == 'POST':
+            try:
+                # Atualizar campos apenas se fornecidos
+                if 'cadastro_id' in request.form and request.form['cadastro_id']:
+                    horario.cadastro_id = int(request.form['cadastro_id'])
                 
-                return render_template('horarios/editar.html', horario=horario, cadastros=cadastros, form_data=request.form)
-            
-            return render_template('horarios/editar.html', horario=horario, cadastros=cadastros)
+                if 'data' in request.form and request.form['data']:
+                    nova_data = datetime.strptime(request.form['data'], '%Y-%m-%d').date()
+                    if nova_data < date.today():
+                        flash('Não é possível agendar para datas passadas!', 'error')
+                        return render_template('horarios/editar.html', 
+                                            horario=horario, 
+                                            cadastros=cadastros, 
+                                            form_data=request.form,
+                                            agora=datetime.now())
+                    horario.data = nova_data
+                
+                if 'hora_inicio' in request.form and request.form['hora_inicio']:
+                    horario.hora_inicio = datetime.strptime(request.form['hora_inicio'], '%H:%M').time()
+                
+                if 'hora_fim' in request.form and request.form['hora_fim']:
+                    horario.hora_fim = datetime.strptime(request.form['hora_fim'], '%H:%M').time()
+                
+                # Validar horários
+                if horario.hora_fim <= horario.hora_inicio:
+                    flash('A hora de término deve ser posterior à hora de início!', 'error')
+                    return render_template('horarios/editar.html', 
+                                        horario=horario, 
+                                        cadastros=cadastros, 
+                                        form_data=request.form,
+                                        agora=datetime.now())
+                
+                # Verificar conflitos (exceto o próprio horário)
+                conflito = Horario.query.filter(
+                    Horario.data == horario.data,
+                    Horario.id != id,
+                    Horario.cadastro_id == horario.cadastro_id,
+                    ((Horario.hora_inicio < horario.hora_fim) & (Horario.hora_fim > horario.hora_inicio))
+                ).first()
+                
+                if conflito:
+                    flash('Já existe outro horário agendado para este período!', 'error')
+                    return render_template('horarios/editar.html', 
+                                        horario=horario, 
+                                        cadastros=cadastros, 
+                                        form_data=request.form,
+                                        agora=datetime.now())
+                
+                # Atualizar outros campos
+                if 'descricao' in request.form:
+                    horario.descricao = request.form['descricao']
+                
+                if 'status' in request.form:
+                    horario.status = request.form['status']
+                
+                if 'tipo_servico' in request.form:
+                    horario.tipo_servico = request.form['tipo_servico']
+                
+                if 'prioridade' in request.form:
+                    horario.prioridade = request.form['prioridade']
+                
+                db.session.commit()
+                
+                flash('Horário atualizado com sucesso!', 'success')
+                return redirect(url_for('visualizar_horario', id=id))
+                
+            except ValueError as e:
+                flash('Formato de data ou hora inválido!', 'error')
+                return render_template('horarios/editar.html', 
+                                    horario=horario, 
+                                    cadastros=cadastros, 
+                                    form_data=request.form,
+                                    agora=datetime.now())
+            except Exception as e:
+                flash(f'Erro ao atualizar horário: {str(e)}', 'error')
+                return render_template('horarios/editar.html', 
+                                    horario=horario, 
+                                    cadastros=cadastros, 
+                                    form_data=request.form,
+                                    agora=datetime.now())
+        
+        # GET - Mostrar formulário
+        return render_template('horarios/editar.html', 
+                            horario=horario, 
+                            cadastros=cadastros,
+                            agora=datetime.now())
     
     @app.route('/horarios/<int:id>/deletar', methods=['POST'])
     def deletar_horario(id):
