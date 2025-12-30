@@ -596,20 +596,17 @@ def create_app():
         
         return redirect(url_for('listar_horarios'))
     
-    # ========== EXPORTAÇÃO CSV ==========
-    
+# ========== EXPORTAÇÃO CSV ==========
+
     @app.route('/exportar/cadastros/csv')
     def exportar_cadastros_csv():
         """Exporta todos os cadastros para CSV"""
         with app.app_context():
-            # Criar CSV em memória
             output = io.StringIO()
             writer = csv.writer(output)
             
-            # Cabeçalho
             writer.writerow(['ID', 'Nome', 'Email', 'Telefone', 'Documento', 'Data Cadastro'])
             
-            # Dados
             cadastros = Cadastro.query.order_by(Cadastro.nome).all()
             for cad in cadastros:
                 writer.writerow([
@@ -621,14 +618,12 @@ def create_app():
                     cad.data_criacao.strftime('%d/%m/%Y %H:%M')
                 ])
             
-            # Configurar resposta
             output.seek(0)
             response = make_response(output.getvalue())
             response.headers['Content-Disposition'] = 'attachment; filename=cadastros.csv'
             response.headers['Content-type'] = 'text/csv'
-            
             return response
-    
+
     @app.route('/exportar/horarios/csv')
     def exportar_horarios_csv():
         """Exporta todos os horários para CSV"""
@@ -640,10 +635,7 @@ def create_app():
             
             horarios = Horario.query.order_by(Horario.data, Horario.hora_inicio).all()
             for hor in horarios:
-                # Calcular duração
-                inicio = hor.hora_inicio
-                fim = hor.hora_fim
-                duracao_min = (fim.hour * 60 + fim.minute) - (inicio.hour * 60 + inicio.minute)
+                duracao_min = (hor.hora_fim.hour * 60 + hor.hora_fim.minute) - (hor.hora_inicio.hour * 60 + hor.hora_inicio.minute)
                 horas = duracao_min // 60
                 minutos = duracao_min % 60
                 duracao = f"{horas}h{minutos}min" if horas > 0 else f"{minutos}min"
@@ -665,78 +657,124 @@ def create_app():
             response = make_response(output.getvalue())
             response.headers['Content-Disposition'] = 'attachment; filename=horarios.csv'
             response.headers['Content-type'] = 'text/csv'
-            
             return response
-    
-    @app.route('/exportar/relatorio/csv')
-    def exportar_relatorio_csv():
-        """Exporta relatório com filtros de data"""
+
+    @app.route('/exportar/relatorio')
+    def exportar_relatorio():
+        """Exporta relatório COMPLETO (cadastros + horários)"""
         try:
             data_inicio = request.args.get('data_inicio', '')
             data_fim = request.args.get('data_fim', '')
             
             if not data_inicio or not data_fim:
-                flash('Datas de início e fim são obrigatórias para o relatório!', 'error')
-                return redirect(url_for('listar_horarios'))
+                flash('Datas de início e fim são obrigatórias!', 'error')
+                return redirect(request.referrer or url_for('index'))
             
             inicio = datetime.strptime(data_inicio, '%Y-%m-%d').date()
             fim = datetime.strptime(data_fim, '%Y-%m-%d').date()
             
             with app.app_context():
+                output = io.StringIO()
+                writer = csv.writer(output)
+                
+                # CABEÇALHO
+                writer.writerow(['RELATÓRIO COMPLETO - CHRONOS WEB MANAGER', f'Período: {data_inicio} até {data_fim}'])
+                writer.writerow(['Gerado em:', datetime.now().strftime('%d/%m/%Y %H:%M')])
+                writer.writerow([])
+                
+                # SEÇÃO 1: CADASTROS NO PERÍODO
+                writer.writerow(['CADASTROS NOVOS NO PERÍODO'])
+                writer.writerow(['ID', 'Nome', 'Email', 'Telefone', 'Documento', 'Data Cadastro'])
+                
+                cadastros = Cadastro.query.filter(
+                    Cadastro.data_criacao >= inicio,
+                    Cadastro.data_criacao <= fim
+                ).order_by(Cadastro.data_criacao).all()
+                
+                for cad in cadastros:
+                    writer.writerow([
+                        cad.id,
+                        cad.nome,
+                        cad.email,
+                        cad.telefone or '',
+                        cad.documento or '',
+                        cad.data_criacao.strftime('%d/%m/%Y %H:%M')
+                    ])
+                
+                writer.writerow(['Total cadastros:', len(cadastros)])
+                writer.writerow([])
+                
+                # SEÇÃO 2: HORÁRIOS NO PERÍODO
+                writer.writerow(['HORÁRIOS AGENDADOS NO PERÍODO'])
+                writer.writerow(['ID', 'Cliente', 'Email Cliente', 'Data', 'Hora Início', 'Hora Fim', 'Duração', 'Serviço', 'Status'])
+                
                 horarios = Horario.query.filter(
                     Horario.data >= inicio,
                     Horario.data <= fim
                 ).order_by(Horario.data, Horario.hora_inicio).all()
                 
-                output = io.StringIO()
-                writer = csv.writer(output)
-                
-                writer.writerow(['RELATÓRIO DE AGENDAMENTOS', f'Período: {data_inicio} até {data_fim}'])
-                writer.writerow([])  # Linha vazia
-                writer.writerow(['ID', 'Cliente', 'Data', 'Hora Início', 'Hora Fim', 'Serviço', 'Status', 'Prioridade'])
-                
                 for hor in horarios:
+                    duracao_min = (hor.hora_fim.hour * 60 + hor.hora_fim.minute) - (hor.hora_inicio.hour * 60 + hor.hora_inicio.minute)
+                    horas = duracao_min // 60
+                    minutos = duracao_min % 60
+                    duracao = f"{horas}h{minutos}min" if horas > 0 else f"{minutos}min"
+                    
                     writer.writerow([
                         hor.id,
                         hor.cadastro.nome,
+                        hor.cadastro.email,
                         hor.data.strftime('%d/%m/%Y'),
                         hor.hora_inicio.strftime('%H:%M'),
                         hor.hora_fim.strftime('%H:%M'),
+                        duracao,
                         hor.descricao or '',
-                        hor.status,
-                        hor.prioridade or 'normal'
+                        hor.status
                     ])
                 
-                # Estatísticas
-                total = len(horarios)
+                writer.writerow(['Total agendamentos:', len(horarios)])
                 writer.writerow([])
-                writer.writerow(['ESTATÍSTICAS DO PERÍODO'])
-                writer.writerow([f'Total de agendamentos: {total}'])
                 
-                # Contar por status
+                # SEÇÃO 3: ESTATÍSTICAS
+                writer.writerow(['ESTATÍSTICAS RESUMO'])
+                
+                # Status dos horários
                 status_count = {}
                 for h in horarios:
                     status_count[h.status] = status_count.get(h.status, 0) + 1
                 
                 for status, count in status_count.items():
-                    writer.writerow([f'{status}: {count}'])
+                    writer.writerow([f'{status}:', count])
+                
+                # Clientes únicos
+                clientes_unicos = len(set([h.cadastro_id for h in horarios]))
+                writer.writerow(['Clientes únicos agendados:', clientes_unicos])
+                
+                # Dias com mais agendamentos
+                if horarios:
+                    datas_count = {}
+                    for h in horarios:
+                        data_str = h.data.strftime('%d/%m/%Y')
+                        datas_count[data_str] = datas_count.get(data_str, 0) + 1
+                    
+                    if datas_count:
+                        data_mais_ocupada = max(datas_count.items(), key=lambda x: x[1])
+                        writer.writerow(['Dia mais ocupado:', data_mais_ocupada[0], f'({data_mais_ocupada[1]} agendamentos)'])
                 
                 output.seek(0)
                 response = make_response(output.getvalue())
-                filename = f'relatorio_{data_inicio}_{data_fim}.csv'
+                filename = f'relatorio_completo_{data_inicio}_{data_fim}.csv'
                 response.headers['Content-Disposition'] = f'attachment; filename={filename}'
                 response.headers['Content-type'] = 'text/csv'
-                
                 return response
                 
         except ValueError:
             flash('Formato de data inválido. Use YYYY-MM-DD', 'error')
-            return redirect(url_for('listar_horarios'))
+            return redirect(request.referrer or url_for('index'))
         except Exception as e:
             flash(f'Erro ao gerar relatório: {str(e)}', 'error')
-            return redirect(url_for('listar_horarios'))
-    
-    # API para relatórios
+            return redirect(request.referrer or url_for('index'))
+
+    # API para relatórios (mantida para compatibilidade)
     @app.route('/api/relatorio')
     def relatorio():
         try:
@@ -757,7 +795,6 @@ def create_app():
                 
                 horarios_dict = [h.to_dict() for h in horarios]
                 
-                # Estatísticas
                 total_agendamentos = len(horarios)
                 total_clientes = len(set([h.cadastro_id for h in horarios]))
                 status_count = {}
@@ -780,7 +817,7 @@ def create_app():
             return jsonify({'error': 'Formato de data inválido. Use YYYY-MM-DD'}), 400
         except Exception as e:
             return jsonify({'error': f'Erro ao gerar relatório: {str(e)}'}), 500
-    
+
     return app
 
 # Criar aplicação

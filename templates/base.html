@@ -127,30 +127,30 @@
                         
                         <li class="nav-item">
                             <a class="nav-link {% if 'cadastros' in request.endpoint %}active{% endif %}" 
-                               href="{{ url_for('listar_cadastros') }}">
+                            href="{{ url_for('listar_cadastros') }}">
                                 <i class="bi bi-people"></i> Cadastros
                             </a>
                         </li>
-                        
+
                         <li class="nav-item">
                             <a class="nav-link {% if 'horarios' in request.endpoint %}active{% endif %}" 
-                               href="{{ url_for('listar_horarios') }}">
+                            href="{{ url_for('listar_horarios') }}">
                                 <i class="bi bi-clock"></i> Horários
                             </a>
                         </li>
-                        
+
                         <li class="nav-item mt-4">
                             <div class="px-3">
                                 <small class="text-muted">RELATÓRIOS</small>
                             </div>
                         </li>
-                        
+
                         <li class="nav-item">
+                            <!-- ✅ ATUALIZADO: Abre o modal único #relatorioModal -->
                             <a class="nav-link" href="#" data-bs-toggle="modal" data-bs-target="#relatorioModal">
-                                <i class="bi bi-graph-up"></i> Relatório
+                                <i class="bi bi-graph-up"></i> Relatório Completo
                             </a>
                         </li>
-                    </ul>
                     
                     <div class="mt-5 px-3">
                         <small class="text-muted">SISTEMA</small>
@@ -199,39 +199,40 @@
         </div>
     </div>
 
-    <!-- Relatório Modal -->
+    <!-- Modal Único para Relatório Completo -->
     <div class="modal fade" id="relatorioModal" tabindex="-1">
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title">Gerar Relatório</h5>
+                    <h5 class="modal-title">
+                        <i class="bi bi-graph-up me-2"></i>Gerar Relatório Completo
+                    </h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
-                    <form id="relatorioForm">
+                    <!-- ✅ FORMULÁRIO CORRETO: action direto para a rota -->
+                    <form action="{{ url_for('exportar_relatorio') }}" method="GET">
                         <div class="mb-3">
-                            <label class="form-label">Período</label>
-                            <div class="input-group">
-                                <input type="date" class="form-control" id="dataInicio" required>
-                                <span class="input-group-text">até</span>
-                                <input type="date" class="form-control" id="dataFim" required>
+                            <label class="form-label">Data Início</label>
+                            <input type="date" class="form-control" name="data_inicio" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Data Fim</label>
+                            <input type="date" class="form-control" name="data_fim" required>  <!-- ✅ CORRIGIDO -->
+                        </div>
+                        <div class="alert alert-info">
+                                <i class="bi bi-info-circle"></i>
+                                O relatório inclui <strong>cadastros novos</strong> e <strong>horários agendados</strong> no período.
                             </div>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">Tipo de Relatório</label>
-                            <select class="form-select" id="tipoRelatorio">
-                                <option value="horarios">Horários Agendados</option>
-                                <option value="cadastros">Novos Cadastros</option>
-                                <option value="completo">Relatório Completo</option>
-                            </select>
-                        </div>
+                            <div class="mt-3">
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="bi bi-download"></i> Gerar Relatório CSV
+                                </button>
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                                    Cancelar
+                                </button>
+                            </div>
                     </form>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="button" class="btn btn-primary" onclick="gerarRelatorio()">
-                        <i class="bi bi-download"></i> Gerar Relatório
-                    </button>
                 </div>
             </div>
         </div>
@@ -308,6 +309,19 @@
                 }
             });
         }
+    </script>
+    <script>
+    // Forçar envio do formulário do modal
+    document.addEventListener('DOMContentLoaded', function() {
+        const form = document.querySelector('#relatorioModal form');
+        if (form) {
+            form.addEventListener('submit', function(e) {
+                // Fecha o modal automaticamente ao enviar
+                const modal = bootstrap.Modal.getInstance(document.getElementById('relatorioModal'));
+                if (modal) modal.hide();
+            });
+        }
+    });
     </script>
     {% block scripts %}{% endblock %}
 </body>
