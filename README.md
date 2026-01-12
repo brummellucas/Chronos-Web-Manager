@@ -343,10 +343,6 @@ cd chronos-web-manager && pip install -r requirements.txt && python app.py
 
 O sistema estará disponível em: **http://localhost:5000**
 
-Usuário de demonstração:
-- Email: admin@chronos.com
-- Senha: demo123 (se implementar login)
-
 ---
 
 ## 🔍 **Para Recrutadores**
